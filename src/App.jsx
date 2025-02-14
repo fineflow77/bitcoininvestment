@@ -358,8 +358,8 @@ const App = () => {
                   data={results}
                   margin={{
                     top: 20,
-                    right: 100,
-                    left: 100,
+                    right: 120,
+                    left: 120,
                     bottom: 20,
                   }}
                 >
@@ -377,10 +377,10 @@ const App = () => {
                     label={{ 
                       value: '資産評価額（億円）', 
                       angle: -90, 
-                      position: 'outside',
+                      position: 'insideLeft',
                       fill: '#9CA3AF',
                       fontSize: '0.75rem',
-                      offset: -75
+                      offset: 0
                     }}
                   />
                   <YAxis 
@@ -392,10 +392,10 @@ const App = () => {
                     label={{ 
                       value: '残存BTC', 
                       angle: 90, 
-                      position: 'outside',
+                      position: 'insideRight',
                       fill: '#9CA3AF',
                       fontSize: '0.75rem',
-                      offset: -65
+                      offset: 0
                     }}
                   />
                   <Tooltip 
