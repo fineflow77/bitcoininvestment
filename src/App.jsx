@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Brush } from 'recharts';
 
-// BTCの価格データ（USD）
 const BTC_PRICE_MODELS = {
   standard: {
     name: "標準モデル",
@@ -19,6 +18,15 @@ const App = () => {
   const [results, setResults] = useState([]);
   const [error, setError] = useState('');
 
+  const validateInput = (value) => {
+    if (!value || isNaN(value) || parseFloat(value) <= 0) {
+      setError('正の数値を入力してください');
+      return false;
+    }
+    setError('');
+    return true;
+  };
+
   const formatJPY = (value) => {
     if (value >= 1e8) return `¥${(value / 1e8).toFixed(2)}億`;
     if (value >= 1e7) return `¥${(value / 1e7).toFixed(2)}千万`;
@@ -26,93 +34,46 @@ const App = () => {
   };
 
   const simulate = () => {
+    if (!validateInput(initialBTC)) return;
     const btcAmount = parseFloat(initialBTC);
-    if (!btcAmount || btcAmount <= 0) {
-      setError('初期BTC保有量は正の数値である必要があります');
-      return;
-    }
-    setError('');
     const simResults = [];
     let currentBTC = btcAmount;
+    let depletionYear = null;
 
     for (let year = 2025; year <= 2050; year++) {
       const priceUSD = BTC_PRICE_MODELS[priceModel].prices[year];
       const btcPriceJPY = priceUSD * 150;
       const totalValue = currentBTC * btcPriceJPY;
       const withdrawalRate = (1000000 / totalValue) * 100;
+      
+      if (currentBTC < 0.5 && !depletionYear) {
+        depletionYear = year;
+      }
+
       simResults.push({
         year,
         btcPrice: btcPriceJPY,
         totalValue,
         remainingBTC: currentBTC,
         withdrawalRate,
-        warning: withdrawalRate > 20 ? '⚠️' : ''
+        warning: withdrawalRate > 5 ? '⚠️ 高取り崩し率' : '',
+        depletionWarning: year === depletionYear ? '⚠️ 資産が尽きる可能性' : ''
       });
     }
     setResults(simResults);
   };
 
   return (
-    <div>
-      <h1>BTC取り崩しシミュレーター</h1>
-      <div>
-        <label>初期BTC保有量：</label>
-        <input
-          type="text"
-          value={initialBTC}
-          onChange={(e) => setInitialBTC(e.target.value)}
-          style={{ borderColor: error ? 'red' : 'black' }}
-        />
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-      </div>
-      <div>
-        <label>価格予測モデル：</label>
-        <select value={priceModel} onChange={(e) => setPriceModel(e.target.value)}>
-          {Object.entries(BTC_PRICE_MODELS).map(([key, model]) => (
-            <option key={key} value={key}>{model.name}</option>
-          ))}
-        </select>
-      </div>
-      <button onClick={simulate}>シミュレーション実行</button>
-      {results.length > 0 && (
-        <div>
-          <table>
-            <thead>
-              <tr>
-                <th>年</th>
-                <th>1BTC価格</th>
-                <th>取り崩し率</th>
-                <th>残存BTC</th>
-                <th>資産評価額</th>
-                <th>警告</th>
-              </tr>
-            </thead>
-            <tbody>
-              {results.map((row) => (
-                <tr key={row.year}>
-                  <td>{row.year}</td>
-                  <td style={{ textAlign: 'right' }}>{formatJPY(row.btcPrice)}</td>
-                  <td style={{ textAlign: 'right' }}>{row.withdrawalRate.toFixed(2)}%</td>
-                  <td style={{ textAlign: 'right' }}>{row.remainingBTC.toFixed(8)}</td>
-                  <td style={{ textAlign: 'right' }}>{formatJPY(row.totalValue)}</td>
-                  <td>{row.warning}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={results}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="year" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="totalValue" stroke="#3b82f6" />
-              <Brush dataKey="year" height={30} stroke="#8884d8" />
-            </LineChart>
-          </ResponsiveContainer>
+    <div className="min-h-screen p-4 md:p-8 bg-gray-900 text-gray-100">
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8">BTC取り崩しシミュレーター</h1>
+        <div className="bg-gray-800 rounded-lg p-4 md:p-6 mb-6 md:mb-8">
+          <label className="block text-sm font-medium mb-2">初期BTC保有量：</label>
+          <input type="text" value={initialBTC} onChange={(e) => setInitialBTC(e.target.value)} className={`bg-gray-700 border ${error ? 'border-red-500' : 'border-gray-600'} rounded-md px-3 py-2 w-full max-w-[200px] text-white`} />
+          {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+          <button onClick={simulate} className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">シミュレーション実行</button>
         </div>
-      )}
+      </div>
     </div>
   );
 };
