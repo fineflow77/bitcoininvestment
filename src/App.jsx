@@ -175,7 +175,7 @@ const App = () => {
             {/* 月額入力 */}
             <div>
               <label className="block text-sm font-medium mb-2">
-                第1段階：月額（税引後）
+                第1段階：毎月取り崩し額（税引後）
               </label>
               <input
                 type="text"
