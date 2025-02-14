@@ -1,9 +1,9 @@
-
-App.jsx
-
-
 import React, { useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
+
+// 必ず import 文はファイルの最上部に書く
 
 // BTCの価格データ（USD）
 const BTC_PRICE_USD = {
