@@ -27,37 +27,22 @@ const App = () => {
     return true;
   };
 
-  const formatJPY = (value) => {
-    if (value >= 1e8) return `¥${(value / 1e8).toFixed(2)}億`;
-    if (value >= 1e7) return `¥${(value / 1e7).toFixed(2)}千万`;
-    return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY', maximumFractionDigits: 0 }).format(value);
-  };
-
   const simulate = () => {
     if (!validateInput(initialBTC)) return;
     const btcAmount = parseFloat(initialBTC);
     const simResults = [];
     let currentBTC = btcAmount;
-    let depletionYear = null;
 
     for (let year = 2025; year <= 2050; year++) {
       const priceUSD = BTC_PRICE_MODELS[priceModel].prices[year];
       const btcPriceJPY = priceUSD * 150;
       const totalValue = currentBTC * btcPriceJPY;
-      const withdrawalRate = (1000000 / totalValue) * 100;
-      
-      if (currentBTC < 0.5 && !depletionYear) {
-        depletionYear = year;
-      }
 
       simResults.push({
         year,
         btcPrice: btcPriceJPY,
         totalValue,
-        remainingBTC: currentBTC,
-        withdrawalRate,
-        warning: withdrawalRate > 5 ? '⚠️ 高取り崩し率' : '',
-        depletionWarning: year === depletionYear ? '⚠️ 資産が尽きる可能性' : ''
+        remainingBTC: currentBTC
       });
     }
     setResults(simResults);
@@ -71,8 +56,41 @@ const App = () => {
           <label className="block text-sm font-medium mb-2">初期BTC保有量：</label>
           <input type="text" value={initialBTC} onChange={(e) => setInitialBTC(e.target.value)} className={`bg-gray-700 border ${error ? 'border-red-500' : 'border-gray-600'} rounded-md px-3 py-2 w-full max-w-[200px] text-white`} />
           {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
-          <button onClick={simulate} className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">シミュレーション実行</button>
+
+          <label className="block text-sm font-medium mt-4 mb-2">価格予測モデル：</label>
+          <select value={priceModel} onChange={(e) => setPriceModel(e.target.value)} className="bg-gray-700 border border-gray-600 rounded-md px-3 py-2 w-full text-white">
+            {Object.entries(BTC_PRICE_MODELS).map(([key, model]) => (
+              <option key={key} value={key}>{model.name}</option>
+            ))}
+          </select>
+
+          <button onClick={simulate} className="bg-blue-600 text-white px-4 py-2 mt-4 rounded-md hover:bg-blue-700">シミュレーション実行</button>
         </div>
+
+        {results.length > 0 && (
+          <div className="bg-gray-800 rounded-lg p-4 md:p-6 overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-gray-400">
+                <tr>
+                  <th className="px-4 py-2">年</th>
+                  <th className="px-4 py-2">1BTC価格</th>
+                  <th className="px-4 py-2">残存BTC</th>
+                  <th className="px-4 py-2">資産評価額</th>
+                </tr>
+              </thead>
+              <tbody>
+                {results.map((row) => (
+                  <tr key={row.year} className="border-t border-gray-700">
+                    <td className="px-4 py-2">{row.year}</td>
+                    <td className="px-4 py-2">{row.btcPrice.toLocaleString()} JPY</td>
+                    <td className="px-4 py-2">{row.remainingBTC.toFixed(8)}</td>
+                    <td className="px-4 py-2">{row.totalValue.toLocaleString()} JPY</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
