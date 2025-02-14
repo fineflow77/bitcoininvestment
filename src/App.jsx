@@ -237,7 +237,7 @@ const App = () => {
 
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      第2段階：月額（税引後）
+                      第2段階：毎月取り崩し額（税引後）
                     </label>
                     <input
                       type="text"
@@ -358,8 +358,8 @@ const App = () => {
                   data={results}
                   margin={{
                     top: 20,
-                    right: 80,
-                    left: 80,
+                    right: 100,
+                    left: 100,
                     bottom: 20,
                   }}
                 >
@@ -380,7 +380,7 @@ const App = () => {
                       position: 'outside',
                       fill: '#9CA3AF',
                       fontSize: '0.75rem',
-                      offset: -60
+                      offset: -75
                     }}
                   />
                   <YAxis 
@@ -395,7 +395,7 @@ const App = () => {
                       position: 'outside',
                       fill: '#9CA3AF',
                       fontSize: '0.75rem',
-                      offset: -50
+                      offset: -65
                     }}
                   />
                   <Tooltip 
