@@ -129,7 +129,8 @@ const App = () => {
       }
 
       const taxRateDecimal = settings.taxRate / 100;
-      const yearlyWithdrawal = (monthlyAmount * 12) / (1 - taxRateDecimal);
+      const yearlyWithdrawalAfterTax = monthlyAmount * 12;
+      const yearlyWithdrawal = yearlyWithdrawalAfterTax / (1 - taxRateDecimal);
       const withdrawalBTC = yearlyWithdrawal / btcPriceJPY;
       const remainingBTC = currentBTC - withdrawalBTC;
 
@@ -137,7 +138,7 @@ const App = () => {
         year,
         btcPrice: btcPriceJPY,
         totalValue,
-        withdrawalAmount: yearlyWithdrawal,
+        withdrawalAmount: yearlyWithdrawalAfterTax,
         remainingBTC,
         withdrawalRate: (yearlyWithdrawal / totalValue) * 100
       });
@@ -153,7 +154,7 @@ const App = () => {
     <div className="min-h-screen p-4 md:p-8 bg-gray-950 text-gray-100">
       <div className="max-w-6xl mx-auto">
         {/* タイトル */}
-        <h1 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8">BTC取崩シミュレーター</h1>
+        <h1 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8">BTC取り崩しシミュレーター</h1>
         
         {/* 入力フォームエリア */}
         <div className="bg-gray-900 rounded-lg p-4 md:p-6 mb-6 md:mb-8">
@@ -187,7 +188,7 @@ const App = () => {
             {/* 年選択 */}
             <div>
               <label className="block text-sm font-medium mb-2">
-                取崩開始年
+                取り崩し開始年
               </label>
               <select
                 value={phaseOne.startYear}
@@ -209,7 +210,7 @@ const App = () => {
                 className="w-4 h-4"
               />
               <label className="text-sm">
-                2段階目の取崩しを設定
+                2段階目の取り崩しを設定
               </label>
             </div>
 
@@ -327,7 +328,7 @@ const App = () => {
                   <th className="px-4 py-2">年</th>
                   <th className="px-4 py-2">1BTC予想価格</th>
                   <th className="px-4 py-2">取り崩し率</th>
-                  <th className="px-4 py-2">年間取崩し額</th>
+                  <th className="px-4 py-2">年間取り崩し額</th>
                   <th className="px-4 py-2">残存BTC</th>
                   <th className="px-4 py-2">資産評価額</th>
                 </tr>
@@ -351,98 +352,98 @@ const App = () => {
         {/* グラフエリア */}
         {results.length > 0 && (
           <div className="bg-gray-900 rounded-lg p-4 md:p-6 w-full">
-          <div style={{ width: '100%', height: '500px' }}>
-            <ResponsiveContainer>
-              <LineChart
-                data={results}
-                margin={{
-                  top: 20,
-                  right: 60,
-                  left: 60,
-                  bottom: 20,
-                }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis 
-                  dataKey="year" 
-                  stroke="#9CA3AF"
-                  tick={{ fill: '#9CA3AF', fontSize: '0.75rem' }}
-                />
-                <YAxis 
-                  yAxisId="left"
-                  stroke="#9CA3AF"
-                  tick={{ fill: '#9CA3AF', fontSize: '0.75rem' }}
-                  tickFormatter={(value) => (value / 100000000).toFixed(1) + "億"}
-                  label={{ 
-                    value: '資産評価額（億円）', 
-                    angle: -90, 
-                    position: 'outside',
-                    fill: '#9CA3AF',
-                    fontSize: '0.75rem',
-                    offset: -45
+            <div style={{ width: '100%', height: '500px' }}>
+              <ResponsiveContainer>
+                <LineChart
+                  data={results}
+                  margin={{
+                    top: 20,
+                    right: 80,
+                    left: 80,
+                    bottom: 20,
                   }}
-                />
-                <YAxis 
-                  yAxisId="right"
-                  orientation="right"
-                  stroke="#9CA3AF"
-                  tick={{ fill: '#9CA3AF', fontSize: '0.75rem' }}
-                  tickFormatter={(value) => value.toFixed(3)}
-                  label={{ 
-                    value: '残存BTC', 
-                    angle: 90, 
-                    position: 'outside',
-                    fill: '#9CA3AF',
-                    fontSize: '0.75rem',
-                    offset: -35
-                  }}
-                />
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: '#1F2937',
-                    border: '1px solid #374151',
-                    borderRadius: '0.375rem',
-                  }}
-                  labelStyle={{
-                    color: '#9CA3AF',
-                  }}
-                  formatter={(value, name) => {
-                    if (name === "資産評価額") {
-                      return [formatJPY(value), name];
-                    }
-                    return [formatBTC(value), name];
-                  }}
-                  labelFormatter={(label) => `${label}年`}
-                />
-                <Legend wrapperStyle={{ fontSize: '0.75rem' }} />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="totalValue"
-                  name="資産評価額"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 6 }}
-                />
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="remainingBTC"
-                  name="残存BTC"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis 
+                    dataKey="year" 
+                    stroke="#9CA3AF"
+                    tick={{ fill: '#9CA3AF', fontSize: '0.75rem' }}
+                  />
+                  <YAxis 
+                    yAxisId="left"
+                    stroke="#9CA3AF"
+                    tick={{ fill: '#9CA3AF', fontSize: '0.75rem' }}
+                    tickFormatter={(value) => (value / 100000000).toFixed(1) + "億"}
+                    label={{ 
+                      value: '資産評価額（億円）', 
+                      angle: -90, 
+                      position: 'outside',
+                      fill: '#9CA3AF',
+                      fontSize: '0.75rem',
+                      offset: -60
+                    }}
+                  />
+                  <YAxis 
+                    yAxisId="right"
+                    orientation="right"
+                    stroke="#9CA3AF"
+                    tick={{ fill: '#9CA3AF', fontSize: '0.75rem' }}
+                    tickFormatter={(value) => value.toFixed(3)}
+                    label={{ 
+                      value: '残存BTC', 
+                      angle: 90, 
+                      position: 'outside',
+                      fill: '#9CA3AF',
+                      fontSize: '0.75rem',
+                      offset: -50
+                    }}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: '#1F2937',
+                      border: '1px solid #374151',
+                      borderRadius: '0.375rem',
+                    }}
+                    labelStyle={{
+                      color: '#9CA3AF',
+                    }}
+                    formatter={(value, name) => {
+                      if (name === "資産評価額") {
+                        return [formatJPY(value), name];
+                      }
+                      return [formatBTC(value), name];
+                    }}
+                    labelFormatter={(label) => `${label}年`}
+                  />
+                  <Legend wrapperStyle={{ fontSize: '0.75rem' }} />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="totalValue"
+                    name="資産評価額"
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 6 }}
+                  />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="remainingBTC"
+                    name="残存BTC"
+                    stroke="#10b981"
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
 };
 
 export default App;
