@@ -61,11 +61,11 @@ const InvestmentSimulator = () => {
 
   return (
     <div className="w-full max-w-2xl mx-auto bg-gray-800 p-6 rounded-lg shadow-lg text-white">
-      <h1 className="text-2xl font-bold text-center mb-6">BTC積み立てシミュレーター</h1>
+      <h1 className="text-2xl font-bold text-center mb-6">ビットコイン積み立てシミュレーター</h1>
 
       <div className="grid gap-4">
         <label>
-          初期BTC保有量
+          初期ビットコイン保有量
           <input
             type="number"
             value={initialBTC}
