@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { coingeckoClient } from '../api/coingecko';
+import { binanceClient } from '../api/binance';
 
 export const useBitcoinPrice = () => {
   const [data, setData] = useState({
@@ -14,32 +14,36 @@ export const useBitcoinPrice = () => {
 
     const fetchData = async () => {
       try {
+        // 価格データと履歴データを並行して取得
         const [current, history] = await Promise.all([
-          coingeckoClient.getCurrentPrice(),
-          coingeckoClient.getPriceHistory()
+          binanceClient.getCurrentPrice(),
+          binanceClient.getPriceHistory()
         ]);
 
-        if (mounted) {
-          setData({
-            price: current.prices,
-            history,
-            loading: false,
-            error: null
-          });
-        }
+        if (!mounted) return;
+
+        if (!current) throw new Error('Failed to fetch current price');
+
+        setData({
+          price: current,
+          history,
+          loading: false,
+          error: null
+        });
       } catch (err) {
-        if (mounted) {
-          setData(prev => ({
-            ...prev,
-            loading: false,
-            error: err.message
-          }));
-        }
+        if (!mounted) return;
+
+        setData(prev => ({
+          ...prev,
+          loading: false,
+          error: err.message
+        }));
       }
     };
 
     fetchData();
-    const interval = setInterval(fetchData, 60000); // 1分ごとに更新
+    // 1分ごとに更新
+    const interval = setInterval(fetchData, 60000);
 
     return () => {
       mounted = false;

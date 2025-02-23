@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useState, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { ChevronDown, ChevronUp, Settings, HelpCircle, Info } from "lucide-react";
@@ -64,8 +60,6 @@ const AdPlacement = ({ position }) => {
     );
 };
 
-
-
 const BTCWithdrawalSimulator = () => {
     // 基本設定
     const [initialBTC, setInitialBTC] = useState("");
@@ -96,9 +90,8 @@ const BTCWithdrawalSimulator = () => {
     const validateInputs = () => {
         const newErrors = {};
 
-        // 基本設定のバリデーション
         if (!initialBTC || isNaN(parseFloat(initialBTC)) || parseFloat(initialBTC) <= 0) {
-            newErrors.initialBTC = "ビットコイン保有数量量を正しく入力してください";
+            newErrors.initialBTC = "ビットコイン保有数量を正しく入力してください";
         }
 
         if (withdrawalType === "fixed") {
@@ -111,7 +104,6 @@ const BTCWithdrawalSimulator = () => {
             }
         }
 
-        // 2段階目の設定のバリデーション
         if (showSecondPhase) {
             if (secondPhaseType === "fixed" && (!secondPhaseAmount || isNaN(parseFloat(secondPhaseAmount)) || parseFloat(secondPhaseAmount) <= 0)) {
                 newErrors.secondPhaseAmount = "2段階目の取り崩し額を正しく入力してください";
@@ -124,7 +116,6 @@ const BTCWithdrawalSimulator = () => {
             }
         }
 
-        // 詳細設定のバリデーション
         if (parseFloat(taxRate) < 0 || parseFloat(taxRate) > 100) {
             newErrors.taxRate = "税率は0%から100%の間で入力してください";
         }
@@ -139,25 +130,7 @@ const BTCWithdrawalSimulator = () => {
         return Object.keys(newErrors).length === 0;
     };
 
-    // 入力値のリセット
-    const resetInputs = () => {
-        setInitialBTC("");
-        setWithdrawalAmount("");
-        setWithdrawalRate("4");
-        setSecondPhaseAmount("");
-        setSecondPhaseRate("4");
-        setErrors({});
-        setResults([]);
-    };
-
-    // 次のコードブロックで、simulateとレンダリング部分を実装します
-    // ...続く
-
-
-
-
-
-    // シミュレーション実行関数の続き
+    // シミュレーション実行関数
     const simulate = () => {
         if (!validateInputs()) {
             return;
@@ -172,7 +145,6 @@ const BTCWithdrawalSimulator = () => {
             const inflationRateNum = parseFloat(inflationRate) / 100;
             const startYearNum = parseInt(startYear);
 
-            // 現在年から開始
             for (let year = CURRENT_YEAR; year <= 2050 && currentBTC > 0; year++) {
                 const isBeforeStart = year < startYearNum;
                 const btcPriceUSD = selectedModel[year] || selectedModel[startYearNum];
@@ -183,7 +155,6 @@ const BTCWithdrawalSimulator = () => {
                 let effectiveWithdrawalRate = 0;
 
                 if (!isBeforeStart) {
-                    // 2段階目の設定を考慮
                     let currentWithdrawalType = withdrawalType;
                     let currentWithdrawalAmount = withdrawalAmount;
                     let currentWithdrawalRate = withdrawalRate;
@@ -195,9 +166,7 @@ const BTCWithdrawalSimulator = () => {
                     }
 
                     if (currentWithdrawalType === "fixed") {
-                        // 税引後の年間取り崩し額（月額の12倍）
                         const annualWithdrawalAmount = parseFloat(currentWithdrawalAmount) * 12;
-                        // BTCに変換
                         withdrawalBTC = annualWithdrawalAmount / btcPriceJPY;
                         withdrawalValue = annualWithdrawalAmount;
                         effectiveWithdrawalRate = (withdrawalBTC / currentBTC) * 100;
@@ -219,7 +188,8 @@ const BTCWithdrawalSimulator = () => {
                     remainingBTC: yearEndBTC,
                     totalValue,
                     phase: isBeforeStart ? "-" :
-                        (showSecondPhase && year >= parseInt(secondPhaseYear)) ? "第2フェーズ" : "第1フェーズ"
+                        (showSecondPhase && year >= parseInt(secondPhaseYear)) ? "2段階目" :
+                            (showSecondPhase ? "1段階目" : "-")
                 });
 
                 currentBTC = yearEndBTC;
@@ -233,10 +203,8 @@ const BTCWithdrawalSimulator = () => {
         }
     };
 
-    // レンダリング
     return (
         <div className="w-full max-w-4xl mx-auto">
-            {/* 広告スペース（上部） */}
             <AdPlacement position="top" />
 
             <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
@@ -244,7 +212,6 @@ const BTCWithdrawalSimulator = () => {
                     ビットコイン取り崩しシミュレーター
                 </h1>
 
-                {/* 基本設定フォーム */}
                 <div className="space-y-4 mb-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <InputField
@@ -262,8 +229,7 @@ const BTCWithdrawalSimulator = () => {
                             />
                         </InputField>
 
-
-                        < InputField
+                        <InputField
                             label="取り崩し開始年"
                             error={errors.startYear}
                         >
@@ -276,8 +242,8 @@ const BTCWithdrawalSimulator = () => {
                                     <option key={year} value={year}>{year}年</option>
                                 ))}
                             </select>
-                        </InputField >
-                    </div >
+                        </InputField>
+                    </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <InputField
@@ -321,7 +287,6 @@ const BTCWithdrawalSimulator = () => {
                         </InputField>
                     </div>
 
-                    {/* 2段階目の設定 */}
                     <div className="mt-6">
                         <label className="flex items-center space-x-2 text-white mb-4">
                             <input
@@ -395,11 +360,6 @@ const BTCWithdrawalSimulator = () => {
                         )}
                     </div>
 
-                    {/* 続く（詳細設定と結果表示部分） */}
-
-
-
-                    {/* 詳細設定 */}
                     <div className="mt-6">
                         <div
                             className="flex items-center justify-between p-3 bg-gray-700 rounded-md cursor-pointer"
@@ -472,7 +432,6 @@ const BTCWithdrawalSimulator = () => {
                         )}
                     </div>
 
-                    {/* シミュレーションボタン */}
                     <div className="mt-6">
                         <button
                             onClick={simulate}
@@ -481,120 +440,118 @@ const BTCWithdrawalSimulator = () => {
                             シミュレーション実行
                         </button>
                     </div>
-                </div >
+                </div>
 
-                {/* サイド広告 */}
-                < div className="hidden lg:block fixed right-4 top-20 w-64" >
+                <div className="hidden lg:block fixed right-4 top-20 w-64">
                     <AdPlacement position="side" />
-                </div >
+                </div>
 
-                {/* 結果表示 */}
-                {
-                    results.length > 0 && (
-                        <div className="mt-8 space-y-6">
-                            {/* グラフ表示 */}
-                            <div className="bg-gray-700 p-4 rounded-lg">
-                                <h2 className="text-lg font-semibold text-white mb-4">資産推移</h2>
-                                <ResponsiveContainer width="100%" height={400}>
-                                    <LineChart data={results} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                                        <XAxis
-                                            dataKey="year"
-                                            stroke="#9CA3AF"
-                                            label={{ value: '年', position: 'insideBottom', offset: -5 }}
-                                        />
-                                        <YAxis
-                                            yAxisId="left"
-                                            stroke="#34D399"
-                                            label={{ value: '残存BTC', angle: -90, position: 'insideLeft' }}
-                                        />
-                                        <YAxis
-                                            yAxisId="right"
-                                            orientation="right"
-                                            stroke="#60A5FA"
-                                            label={{
-                                                value: '資産評価額',
-                                                angle: 90,
-                                                position: 'insideRight',
-                                                offset: 10,
-                                                style: { fill: '#60A5FA', fontSize: '14px' }
-                                            }}
-                                        />
-                                        <Tooltip
-                                            contentStyle={{ backgroundColor: '#1F2937', border: 'none' }}
-                                            labelStyle={{ color: '#9CA3AF' }}
-                                            formatter={(value, name) => {
-                                                if (name === "残存BTC") return [formatBTC(value), name];
-                                                return [formatCurrency(value), name];
-                                            }}
-                                        />
-                                        <Legend />
-                                        <Line
-                                            yAxisId="left"
-                                            type="monotone"
-                                            dataKey="remainingBTC"
-                                            name="残存BTC"
-                                            stroke="#34D399"
-                                            dot={false}
-                                        />
-                                        <Line
-                                            yAxisId="right"
-                                            type="monotone"
-                                            dataKey="totalValue"
-                                            name="資産評価額"
-                                            stroke="#60A5FA"
-                                            dot={false}
-                                        />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
-
-                            {/* 結果テーブル */}
-                            <div className="bg-gray-700 p-4 rounded-lg overflow-x-auto">
-                                <table className="w-full">
-                                    <thead>
-                                        <tr className="text-left border-b border-gray-600">
-                                            <th className="p-2 whitespace-nowrap text-gray-300">年</th>
-                                            <th className="p-2 whitespace-nowrap text-gray-300">フェーズ</th>
-                                            <th className="p-2 whitespace-nowrap text-gray-300">1BTC価格</th>
-                                            <th className="p-2 whitespace-nowrap text-gray-300">取り崩し率</th>
-                                            <th className="p-2 whitespace-nowrap text-gray-300">年間取り崩し額</th>
-                                            <th className="p-2 whitespace-nowrap text-gray-300">残存BTC</th>
-                                            <th className="p-2 whitespace-nowrap text-gray-300">資産評価額</th>
-
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {results.map((result, index) => (
-                                            <tr
-                                                key={index}
-                                                className={`
-                                               ${index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-700'}
-                                               ${result.phase === "-" ? 'text-gray-500' : 'text-gray-100'}
-                                           `}
-                                            >
-
-                                                <td className="p-2 whitespace-nowrap">{result.year}</td>
-                                                <td className="p-2 whitespace-nowrap">{result.phase}</td>
-                                                <td className="p-2 whitespace-nowrap">{formatCurrency(result.btcPrice)}</td>
-                                                <td className="p-2 whitespace-nowrap">{result.withdrawalRate === "-" ? "-" : formatPercent(result.withdrawalRate)}</td>
-                                                <td className="p-2 whitespace-nowrap">{result.withdrawalAmount === "-" ? "-" : formatCurrency(result.withdrawalAmount)}</td>
-                                                <td className="p-2 whitespace-nowrap">{formatBTC(result.remainingBTC)}</td>
-                                                <td className="p-2 whitespace-nowrap">{formatCurrency(result.totalValue)}</td>
-
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* 下部広告 */}
-                            <AdPlacement position="bottom" />
+                {results.length > 0 && (
+                    <div className="mt-8 space-y-6">
+                        <div className="bg-gray-700 p-4 rounded-lg">
+                            <h2 className="text-lg font-semibold text-white mb-4">資産推移</h2>
+                            <ResponsiveContainer width="100%" height={400}>
+                                <LineChart data={results} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                                    <XAxis
+                                        dataKey="year"
+                                        stroke="#9CA3AF"
+                                    />
+                                    <YAxis
+                                        yAxisId="left"
+                                        stroke="#34D399"
+                                        label={{ value: '残存BTC', angle: -90, position: 'insideLeft' }}
+                                        tickFormatter={(value) => formatBTC(value)}
+                                    />
+                                    <YAxis
+                                        yAxisId="right"
+                                        orientation="right"
+                                        stroke="#60A5FA"
+                                        label={{
+                                            value: '資産評価額',
+                                            angle: 90,
+                                            position: 'insideRight',
+                                            offset: 10,
+                                            style: { fill: '#60A5FA', fontSize: '14px' }
+                                        }}
+                                        tickFormatter={(value) => formatCurrency(value)}
+                                        width={100}
+                                    />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#1F2937', border: 'none' }}
+                                        labelStyle={{ color: '#9CA3AF' }}
+                                        formatter={(value, name) => {
+                                            if (name === "残存BTC") return [formatBTC(value), name];
+                                            return [formatCurrency(value), name];
+                                        }}
+                                    />
+                                    <Legend />
+                                    <Line
+                                        yAxisId="left"
+                                        type="monotone"
+                                        dataKey="remainingBTC"
+                                        name="残存BTC"
+                                        stroke="#34D399"
+                                        dot={false}
+                                    />
+                                    <Line
+                                        yAxisId="right"
+                                        type="monotone"
+                                        dataKey="totalValue"
+                                        name="資産評価額"
+                                        stroke="#60A5FA"
+                                        dot={false}
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
                         </div>
-                    )
-                }
-            </div >
-        </div >
+
+                        <div className="bg-gray-700 p-4 rounded-lg overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="text-left border-b border-gray-600">
+                                        <th className="p-2 whitespace-nowrap text-gray-300">年</th>
+                                        {showSecondPhase && (
+                                            <th className="p-2 whitespace-nowrap text-gray-300">フェーズ</th>
+                                        )}
+                                        <th className="p-2 whitespace-nowrap text-gray-300">1BTC価格</th>
+                                        <th className="p-2 whitespace-nowrap text-gray-300">取り崩し率</th>
+                                        <th className="p-2 whitespace-nowrap text-gray-300">年間取り崩し額</th>
+                                        <th className="p-2 whitespace-nowrap text-gray-300">残存BTC</th>
+                                        <th className="p-2 whitespace-nowrap text-gray-300">資産評価額</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {results.map((result, index) => (
+                                        <tr
+                                            key={index}
+                                            className={`
+            ${index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-700'}
+            ${showSecondPhase && result.phase === "-" ? 'text-gray-500' : 'text-gray-100'}
+        `}
+                                        >
+                                            <td className="p-2 whitespace-nowrap">{result.year}</td>
+                                            {showSecondPhase && (
+                                                <td className="p-2 whitespace-nowrap">
+                                                    {result.phase === "-" ? "-" : result.phase}
+                                                </td>
+                                            )}
+                                            <td className="p-2 whitespace-nowrap">{formatCurrency(result.btcPrice)}</td>
+                                            <td className="p-2 whitespace-nowrap">{result.withdrawalRate === "-" ? "-" : formatPercent(result.withdrawalRate)}</td>
+                                            <td className="p-2 whitespace-nowrap">{result.withdrawalAmount === "-" ? "-" : formatCurrency(result.withdrawalAmount)}</td>
+                                            <td className="p-2 whitespace-nowrap">{formatBTC(result.remainingBTC)}</td>
+                                            <td className="p-2 whitespace-nowrap">{formatCurrency(result.totalValue)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <AdPlacement position="bottom" />
+                    </div>
+                )}
+            </div>
+        </div>
     );
 };
 

@@ -22,7 +22,7 @@ const SimulatorPage = () => {
             }`}
           onClick={() => setSimulatorType('investment')}
         >
-          積立シミュレーター
+          積み立てシミュレーター
         </button>
       </div>
 
