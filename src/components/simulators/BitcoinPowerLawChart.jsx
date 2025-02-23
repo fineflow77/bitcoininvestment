@@ -3,14 +3,14 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 
-// 定数定義
+// ビットコインの起源日
 const GENESIS_DATE = new Date('2009-01-03');
 
 // 色の定義
 const COLORS = {
-    price: '#FFA500',      // オレンジ
-    median: '#00FF00',     // 緑
-    support: '#FF0000'     // 赤
+    price: '#FFA500',      // オレンジ（実価格）
+    median: '#00FF00',     // 緑（中央値）
+    support: '#FF0000'     // 赤（下限値）
 };
 
 
@@ -781,117 +781,57 @@ const WEEKLY_PRICES = [
     { date: '2025-02-16', price: 98462.70 }
 ];
 
+// 週次価格データ（省略）
+// ※ 過去の価格データは省略、WEEKLY_PRICES 配列を適宜挿入してください
 
 // 決定係数（R²）の計算
 const calculateRSquared = (actualPrices, predictedPrices) => {
     if (actualPrices.length !== predictedPrices.length || actualPrices.length === 0) {
         return NaN;
     }
-
     const n = actualPrices.length;
     const actualMean = actualPrices.reduce((sum, price) => sum + price, 0) / n;
-
-    let sst = 0;
-    let sse = 0;
-
+    let sst = 0, sse = 0;
     for (let i = 0; i < n; i++) {
         sst += Math.pow(actualPrices[i] - actualMean, 2);
         sse += Math.pow(actualPrices[i] - predictedPrices[i], 2);
     }
-
     return 1 - (sse / sst);
 };
 
-// モデルの計算関数
+// モデル計算
 const calculateDaysSinceGenesis = (dateStr) => {
     const date = new Date(dateStr);
     return Math.max(1, Math.floor((date - GENESIS_DATE) / (1000 * 60 * 60 * 24)));
 };
-
-const calculateMedianPrice = (days) => {
-    return Math.pow(10, -17.01593313 + 5.84509376 * Math.log10(days));
-};
-
-const calculateSupportPrice = (days) => {
-    return Math.pow(10, -17.668) * Math.pow(days, 5.926);
-};
-
-// 日付フォーマット
-const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('ja-JP', {
-        year: 'numeric',
-        month: 'numeric',
-        day: 'numeric'
-    });
-};
-
-// 価格フォーマット
-const formatPrice = (value) => {
-    return new Intl.NumberFormat('ja-JP', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-    }).format(value);
-};
+const calculateMedianPrice = (days) => Math.pow(10, -17.01593313 + 5.84509376 * Math.log10(days));
+const calculateSupportPrice = (days) => Math.pow(10, -17.668) * Math.pow(days, 5.926);
 
 // カスタムツールチップ
 const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload || !payload.length) return null;
-
     return (
-        <div className="bg-gray-900/95 border border-gray-700 rounded-lg p-4 shadow-xl">
-            <p className="text-gray-200 font-bold mb-2 text-sm">
-                {formatDate(label)}
-            </p>
-            <div className="space-y-1">
-                {payload.map((entry, index) => {
-                    const value = Math.pow(10, entry.value);
-                    const label = {
-                        price: '実価格',
-                        medianModel: '中央値',
-                        supportModel: '下限値'
-                    }[entry.dataKey];
-
-                    return (
-                        <div
-                            key={index}
-                            className="flex justify-between items-center text-sm py-1"
-                        >
-                            <span style={{ color: entry.color }}>{label}:</span>
-                            <span className="text-gray-200 ml-4">
-                                {formatPrice(value)}
-                            </span>
-                        </div>
-                    );
-                })}
-            </div>
+        <div className="bg-gray-900 p-3 rounded-lg border border-gray-700 shadow-lg">
+            <p className="text-gray-200 font-bold mb-2 text-sm">{label}</p>
+            {payload.map((entry, index) => (
+                <p key={index} className="text-sm" style={{ color: entry.color }}>
+                    {entry.name}: {Math.pow(10, entry.value).toLocaleString()} USD
+                </p>
+            ))}
         </div>
     );
 };
 
-// カスタムレジェンド
+// カスタム凡例（修正）
 const CustomLegend = ({ payload }) => {
     if (!payload) return null;
-
     return (
-        <div className="flex gap-6 justify-end items-center">
+        <div className="flex gap-6 justify-end">
             {payload.map((entry, index) => (
-                <div
-                    key={index}
-                    className="flex items-center gap-2"
-                >
-                    <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: entry.color }}
-                    />
+                <div key={index} className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
                     <span className="text-gray-200 text-sm">
-                        {
-                            entry.value === 'price' ? '実価格' :
-                                entry.value === 'medianModel' ? '中央値' :
-                                    '下限値'
-                        }
+                        {entry.value === 'price' ? '実価格' : entry.value === 'medianModel' ? '中央値' : '下限値'}
                     </span>
                 </div>
             ))}
@@ -902,7 +842,6 @@ const CustomLegend = ({ payload }) => {
 // メインコンポーネント
 const BTCPowerLawChart = () => {
     const chartData = useMemo(() => {
-        // 過去データの処理
         const historicalData = WEEKLY_PRICES.map(item => ({
             date: item.date,
             price: Math.log10(item.price),
@@ -910,7 +849,7 @@ const BTCPowerLawChart = () => {
             supportModel: Math.log10(calculateSupportPrice(calculateDaysSinceGenesis(item.date)))
         }));
 
-        // 未来データの生成（2040年まで）
+        // 未来データ（2040年まで）
         const futureData = [];
         if (WEEKLY_PRICES.length > 0) {
             const lastDate = new Date(WEEKLY_PRICES[WEEKLY_PRICES.length - 1].date);
@@ -920,149 +859,56 @@ const BTCPowerLawChart = () => {
             while (currentDate <= endDate) {
                 const dateStr = currentDate.toISOString().split('T')[0];
                 const days = calculateDaysSinceGenesis(dateStr);
-
                 futureData.push({
                     date: dateStr,
                     medianModel: Math.log10(calculateMedianPrice(days)),
                     supportModel: Math.log10(calculateSupportPrice(days))
                 });
-
-                currentDate.setDate(currentDate.getDate() + 7);
+                currentDate.setDate(currentDate.getDate() + 7); // 1週間ずつ進める
             }
         }
 
-        // 決定係数の計算
         const actualPrices = historicalData.map(item => item.price);
         const medianPrices = historicalData.map(item => item.medianModel);
         const rSquaredMedian = calculateRSquared(actualPrices, medianPrices);
 
-        const lowerData = historicalData.filter(item =>
-            Math.pow(10, item.price) <= Math.pow(10, item.supportModel) * 1.5
-        );
-        const rSquaredSupport = calculateRSquared(
-            lowerData.map(item => item.price),
-            lowerData.map(item => item.supportModel)
-        );
+        // 下限付近のデータでR²を計算
+        const lowerBoundThreshold = 0.2;
+        const lowerBoundData = historicalData.filter(item => Math.abs(item.price - item.supportModel) < lowerBoundThreshold);
+        const lowerBoundActualPrices = lowerBoundData.map(item => item.price);
+        const lowerBoundSupportPrices = lowerBoundData.map(item => item.supportModel);
+        const rSquaredLowerBound = calculateRSquared(lowerBoundActualPrices, lowerBoundSupportPrices);
 
-        return {
-            data: [...historicalData, ...futureData],
-            rSquaredMedian,
-            rSquaredSupport
-        };
+        return { data: [...historicalData, ...futureData], rSquaredMedian, rSquaredLowerBound };
     }, []);
 
     return (
         <div className="w-full bg-gray-900 p-6 rounded-xl shadow-xl">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                <h2 className="text-xl font-bold text-white">
-                    パワーロー チャート
-                </h2>
-                <div className="flex flex-col md:flex-row gap-4 text-sm">
-                    <div className="bg-gray-800/80 px-4 py-2 rounded-lg flex items-center gap-2">
-                        <span className="text-gray-400">中央値 R²:</span>
-                        <span className="text-green-400 font-mono">
-                            {chartData.rSquaredMedian.toFixed(4)}
-                        </span>
-                    </div>
-                    <div className="bg-gray-800/80 px-4 py-2 rounded-lg flex items-center gap-2">
-                        <span className="text-gray-400">下限値 R²:</span>
-                        <span className="text-red-400 font-mono">
-                            {chartData.rSquaredSupport.toFixed(4)}
-                        </span>
-                    </div>
+            <h2 className="text-xl font-bold text-white mb-4">パワーロー チャート</h2>
+
+            {/* R² の表示 */}
+            <div className="flex flex-col md:flex-row gap-4 text-sm">
+                <div className="bg-gray-800/80 px-4 py-2 rounded-lg flex items-center gap-2">
+                    <span className="text-gray-400">中央値 R²:</span>
+                    <span className="text-green-400 font-mono">{chartData.rSquaredMedian.toFixed(4)}</span>
+                </div>
+                <div className="bg-gray-800/80 px-4 py-2 rounded-lg flex items-center gap-2">
+                    <span className="text-gray-400">下限付近 R²:</span>
+                    <span className="text-blue-400 font-mono">{chartData.rSquaredLowerBound.toFixed(4)}</span>
                 </div>
             </div>
 
-            <div className="h-[600px] mt-4">
+            <div className="h-[500px]">
                 <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                        data={chartData.data}
-                        margin={{
-                            top: 20,
-                            right: 30,
-                            left: 60,
-                            bottom: 40
-                        }}
-                    >
-                        <CartesianGrid
-                            strokeDasharray="3 3"
-                            stroke="#333"
-                            opacity={0.5}
-                            horizontal={true}
-                            vertical={false}
-                        />
-
-                        <XAxis
-                            dataKey="date"
-                            type="category"
-                            tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                            tickFormatter={dateStr => new Date(dateStr).getFullYear()}
-                            axisLine={{ stroke: '#4B5563' }}
-                            interval={100}
-                            label={{
-                                value: '年',
-                                position: 'bottom',
-                                offset: 20,
-                                style: { fill: '#9CA3AF' }
-                            }}
-                        />
-
-                        <YAxis
-                            type="number"
-                            domain={['auto', 'auto']}
-                            tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                            tickFormatter={(value) => {
-                                const actualValue = Math.pow(10, value);
-                                if (actualValue >= 1000000) {
-                                    return `$${(actualValue / 1000000).toFixed(0)}M`;
-                                } else if (actualValue >= 1000) {
-                                    return `$${(actualValue / 1000).toFixed(0)}K`;
-                                }
-                                return `$${actualValue.toFixed(0)}`;
-                            }}
-                            axisLine={{ stroke: '#4B5563' }}
-                            label={{
-                                value: '価格 (USD)',
-                                angle: -90,
-                                position: 'insideLeft',
-                                offset: -45,
-                                style: { fill: '#9CA3AF' }
-                            }}
-                        />
-
+                    <LineChart data={chartData.data} margin={{ top: 20, right: 30, left: 60, bottom: 40 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#333" opacity={0.5} />
+                        <XAxis dataKey="date" tick={{ fill: '#9CA3AF', fontSize: 12 }} />
+                        <YAxis tick={{ fill: '#9CA3AF', fontSize: 12 }} />
                         <Tooltip content={<CustomTooltip />} />
                         <Legend content={<CustomLegend />} />
-
-                        <Line
-                            name="price"
-                            type="monotone"
-                            dataKey="price"
-                            stroke={COLORS.price}
-                            dot={false}
-                            strokeWidth={2}
-                            connectNulls={true}
-                        />
-
-                        <Line
-                            name="medianModel"
-                            type="monotone"
-                            dataKey="medianModel"
-                            stroke={COLORS.median}
-                            dot={false}
-                            strokeWidth={1.5}
-                            connectNulls={true}
-                        />
-
-                        <Line
-                            name="supportModel"
-                            type="monotone"
-                            dataKey="supportModel"
-                            stroke={COLORS.support}
-                            strokeDasharray="3 3"
-                            dot={false}
-                            strokeWidth={1.5}
-                            connectNulls={true}
-                        />
+                        <Line name="実価格" type="monotone" dataKey="price" stroke={COLORS.price} dot={false} strokeWidth={2} />
+                        <Line name="中央値" type="monotone" dataKey="medianModel" stroke={COLORS.median} dot={false} strokeWidth={1.5} />
+                        <Line name="下限値" type="monotone" dataKey="supportModel" stroke={COLORS.support} strokeDasharray="3 3" dot={false} strokeWidth={1.5} />
                     </LineChart>
                 </ResponsiveContainer>
             </div>

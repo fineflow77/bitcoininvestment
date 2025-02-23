@@ -33,13 +33,13 @@ const Home = () => {
       const supportUSD = Math.pow(10, -17.668) * Math.pow(daysSinceGenesis, 5.926);
       const supportJPY = supportUSD * exchangeRate;
 
-      // ステート更新
-      setPowerLawPrice({ usd: medianUSD, jpy: medianJPY });
-      setBottomPrice({ usd: supportUSD, jpy: supportJPY });
+      // 小数点なしの整数に丸める
+      setPowerLawPrice({ usd: Math.round(medianUSD), jpy: Math.round(medianJPY) });
+      setBottomPrice({ usd: Math.round(supportUSD), jpy: Math.round(supportJPY) });
 
       if (price.prices.usd) {
         const dev = ((price.prices.usd / medianUSD) - 1) * 100;
-        setDeviation(dev);
+        setDeviation(Math.round(dev)); // 小数点なし
       }
     }
   }, [price, exchangeRate]);
@@ -52,7 +52,7 @@ const Home = () => {
           <h2 className="text-2xl font-bold text-white mb-4">本日のビットコイン価格概要</h2>
 
           <div className="text-gray-400 text-sm mb-4">
-            USD/JPY: ¥{exchangeRate.toFixed(2)}
+            USD/JPY: ¥{Math.round(exchangeRate)}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -66,13 +66,13 @@ const Home = () => {
               ) : (
                 <>
                   <p className="text-2xl text-white">
-                    {formatCurrency(price?.prices?.jpy)}
+                    {formatCurrency(Math.round(price?.prices?.jpy))}
                   </p>
                   <p className="text-gray-400 text-sm">
-                    (${price?.prices?.usd.toLocaleString()})
+                    (${Math.round(price?.prices?.usd).toLocaleString()})
                   </p>
                   <p className={`text-sm mt-2 ${deviation > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    パワーロー比 {deviation > 0 ? '+' : ''}{deviation.toFixed(1)}%
+                    パワーロー比 {deviation > 0 ? '+' : ''}{deviation}%
                   </p>
                 </>
               )}
@@ -107,6 +107,18 @@ const Home = () => {
           <BitcoinPowerLawChart />
         </div>
 
+        {/* 広告スペース追加 */}
+        <div className="flex justify-center items-center my-8">
+          <ins
+            className="adsbygoogle"
+            style={{ display: 'block' }}
+            data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+            data-ad-slot="XXXXXXXXXX"
+            data-ad-format="auto"
+            data-full-width-responsive="true"
+          />
+        </div>
+
         {/* シミュレーターリンク */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Link
@@ -131,18 +143,6 @@ const Home = () => {
             <p className="text-gray-200">
               目標ビットコイン保有数へ向けて積み立てプランを立てる
             </p>
-          </Link>
-        </div>
-
-        {/* パワーロー解説 */}
-        <div className="bg-gray-800 rounded-lg p-6">
-          <h2 className="text-xl font-bold text-white mb-4">パワーローモデルとは</h2>
-          <p className="text-gray-300 mb-4">
-            物理法則に基づく、ビットコインの長期価格予測モデル。過去の価格推移から、時間経過と価格の関係を数学的に分析し、
-            将来の価格帯を予測します。長期投資の指標として活用できます。
-          </p>
-          <Link to="/powerlaw" className="text-blue-400 hover:text-blue-300">
-            詳しく見る →
           </Link>
         </div>
       </div>
