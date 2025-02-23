@@ -825,19 +825,29 @@ const CustomTooltip = ({ active, payload, label }) => {
 // カスタム凡例（修正）
 const CustomLegend = ({ payload }) => {
     if (!payload) return null;
+
+    // `dataKey` に基づく日本語ラベルのマッピング
+    const labelMap = {
+        price: '実価格',
+        medianModel: '中央値',
+        supportModel: '下限値'
+    };
+
     return (
         <div className="flex gap-6 justify-end">
-            {payload.map((entry, index) => (
-                <div key={index} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
-                    <span className="text-gray-200 text-sm">
-                        {entry.value === 'price' ? '実価格' : entry.value === 'medianModel' ? '中央値' : '下限値'}
-                    </span>
-                </div>
-            ))}
+            {payload.map((entry, index) => {
+                const label = labelMap[entry.dataKey] || entry.dataKey; // マッピングがない場合はそのまま
+                return (
+                    <div key={index} className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
+                        <span className="text-gray-200 text-sm">{label}</span>
+                    </div>
+                );
+            })}
         </div>
     );
 };
+
 
 // メインコンポーネント
 const BTCPowerLawChart = () => {
