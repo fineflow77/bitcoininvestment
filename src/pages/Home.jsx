@@ -39,28 +39,36 @@ const Home = () => {
   const [bottomPrice, setBottomPrice] = useState({ usd: 0, jpy: 0 });
   const [deviation, setDeviation] = useState(0);
   const [rateLoading, setRateLoading] = useState(true);
-  const [rateError, setRateError] = useState(null);
+  const [rateError, setRateError] = useState(false); // 初期値をfalseに変更
+
   const [previousPrice, setPreviousPrice] = useState({ usd: 0, jpy: 0 }); // 前日価格を追加
 
   // Fixer.io APIから為替レートを取得
   useEffect(() => {
     const fetchExchangeRate = async () => {
+      setRateLoading(true);
+      setRateError(false); // エラー状態をリセット
       try {
         const response = await fetch(
           `http://data.fixer.io/api/latest?access_key=c13d30131de502b47745aaea8e58c20c&symbols=USD,JPY`
         );
+        if (!response.ok) {
+          throw new Error('APIリクエストに失敗しました');
+        }
         const data = await response.json();
         if (data.success) {
           const rate = data.rates.JPY / data.rates.USD; // USD/JPYレート
           setExchangeRate(rate);
           setRateLoading(false);
+          setRateError(false);
         } else {
-          throw new Error(data.error.info || '為替レートの取得に失敗しました');
+          throw new Error(data.error?.info || 'APIレスポンスが無効です');
         }
       } catch (err) {
-        setRateError(err.message);
-        setExchangeRate(149.0); // フォールバック値を小数点第1桁（149.0）に調整
+        console.error('為替レートの取得エラー:', err.message);
+        setExchangeRate(149.0); // フォールバック値を小数点第1桁（149.0）に設定
         setRateLoading(false);
+        setRateError(true);
       }
     };
     fetchExchangeRate();
@@ -135,7 +143,7 @@ const Home = () => {
           <div className="flex items-center text-gray-400 text-sm mb-4">
             <span>
               USD/JPY: ¥
-              {rateLoading ? '読み込み中...' : rateError ? '149.0 (デフォルト)' : Math.round(exchangeRate * 10) / 10}
+              {rateLoading ? '読み込み中...' : (rateError || !exchangeRate) ? '149.0' : Math.round(exchangeRate * 10) / 10}
             </span>
             <TooltipIcon content="Fixer.ioから取得した最新の為替レートを使用しています。" />
           </div>
@@ -167,7 +175,7 @@ const Home = () => {
             <div className="bg-gray-700 p-4 rounded-lg hover:shadow-lg transition-shadow">
               <p className="text-gray-400 mb-2 flex items-center">
                 本日のパワーロー中央値
-                <TooltipIcon content="パワーロー中央値モデルによる予測価格" />
+                <TooltipIcon content="決定係数（R²）は、モデルの予測が実際のデータにどれだけ一致しているかを示す指標です。値が1に近いほど、モデルが実価格に正確にフィットしていることを意味します。ビットコインパワーローの中央値モデルは、全体のデータを用いて計算しています。" />
               </p>
               <p className="text-gray-200 text-2xl">{formatCurrency(powerLawPrice.jpy)}</p>
               <p className="text-gray-400 text-sm">(${powerLawPrice.usd.toLocaleString()})</p>
@@ -176,7 +184,7 @@ const Home = () => {
             <div className="bg-gray-700 p-4 rounded-lg hover:shadow-lg transition-shadow">
               <p className="text-gray-400 mb-2 flex items-center">
                 本日のパワーロー下限値
-                <TooltipIcon content="パワーローサポートラインによる下限予測価格" />
+                <TooltipIcon content="決定係数（R²）は、モデルの予測が実際のデータにどれだけ一致しているかを示す指標です。値が1に近いほど、モデルが実価格に正確にフィットしていることを意味します。ビットコインパワーローの下限値モデルでは、下限付近（実価格が下限値に近い部分）のデータを用いて計算しています。この下限値の線は、ビットコイン価格の「サポートライン（支持線）」として機能し、価格が下落した際に支える役割を果たすとされています。" />
               </p>
               <p className="text-gray-200 text-2xl">{formatCurrency(bottomPrice.jpy)}</p>
               <p className="text-gray-400 text-sm">(${bottomPrice.usd.toLocaleString()})</p>
