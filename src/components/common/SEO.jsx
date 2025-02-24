@@ -11,7 +11,7 @@ const SEO = ({ title, description }) => {
             <meta name="description" content={description} />
 
             {/* キーワード（Google SEO対策） */}
-            <meta name="keywords" content="ビットコイン, 積立, 取り崩し, FIRE, 長期予測, 1億, 10億, パワーロー, べき乗の法則, Giovanni, 価格予測, BTC投資" />
+            <meta name="keywords" content="ビットコイン, 積立, 取り崩し, シミュレーション, 億り人, FIRE, S&P500, 長期予測, 1億, 10億, パワーロー, べき乗の法則, 将来性, 価格予測, BTC投資" />
 
             {/* OGP設定（SNSでの表示） */}
             <meta property="og:title" content={title} />

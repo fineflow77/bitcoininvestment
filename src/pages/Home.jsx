@@ -39,36 +39,28 @@ const Home = () => {
   const [bottomPrice, setBottomPrice] = useState({ usd: 0, jpy: 0 });
   const [deviation, setDeviation] = useState(0);
   const [rateLoading, setRateLoading] = useState(true);
-  const [rateError, setRateError] = useState(false); // 初期値をfalseに変更
-
+  const [rateError, setRateError] = useState(null);
   const [previousPrice, setPreviousPrice] = useState({ usd: 0, jpy: 0 }); // 前日価格を追加
 
   // Fixer.io APIから為替レートを取得
   useEffect(() => {
     const fetchExchangeRate = async () => {
-      setRateLoading(true);
-      setRateError(false); // エラー状態をリセット
       try {
         const response = await fetch(
           `http://data.fixer.io/api/latest?access_key=c13d30131de502b47745aaea8e58c20c&symbols=USD,JPY`
         );
-        if (!response.ok) {
-          throw new Error('APIリクエストに失敗しました');
-        }
         const data = await response.json();
         if (data.success) {
           const rate = data.rates.JPY / data.rates.USD; // USD/JPYレート
-          setExchangeRate(rate);
+          setExchangeRate(parseFloat(rate.toFixed(2))); // ★ 修正: 小数点2桁で設定
           setRateLoading(false);
-          setRateError(false);
         } else {
-          throw new Error(data.error?.info || 'APIレスポンスが無効です');
+          throw new Error(data.error.info || '為替レートの取得に失敗しました');
         }
       } catch (err) {
-        console.error('為替レートの取得エラー:', err.message);
-        setExchangeRate(149.0); // フォールバック値を小数点第1桁（149.0）に設定
+        setRateError(err.message);
+        setExchangeRate(150.00); // フォールバック値（画像のUSD/JPY: ¥150に合わせる）
         setRateLoading(false);
-        setRateError(true);
       }
     };
     fetchExchangeRate();
@@ -93,7 +85,7 @@ const Home = () => {
 
             if (previousEntry) {
               const previousPriceUSD = previousEntry[1];
-              const previousJpyPrice = previousPriceUSD * (exchangeRate || 149.0); // JPYに変換（フォールバックも小数点第1桁）
+              const previousJpyPrice = previousPriceUSD * (exchangeRate || 149); // JPYに変換
               setPreviousPrice({ usd: previousPriceUSD, jpy: previousJpyPrice });
               console.log('前日価格（USD）:', previousPriceUSD, '現在価格（USD）:', price.prices.usd);
             } else {
@@ -113,10 +105,10 @@ const Home = () => {
       const daysSinceGenesis = getDaysSinceGenesis();
 
       const medianUSD = Math.pow(10, -17.01593313 + 5.84509376 * Math.log10(daysSinceGenesis));
-      const medianJPY = medianUSD * (exchangeRate || 149.0);
+      const medianJPY = medianUSD * (exchangeRate || 149);
 
       const supportUSD = Math.pow(10, -17.668) * Math.pow(daysSinceGenesis, 5.926);
-      const supportJPY = supportUSD * (exchangeRate || 149.0);
+      const supportJPY = supportUSD * (exchangeRate || 149);
 
       setPowerLawPrice({ usd: Math.round(medianUSD), jpy: Math.round(medianJPY) });
       setBottomPrice({ usd: Math.round(supportUSD), jpy: Math.round(supportJPY) });
@@ -138,12 +130,12 @@ const Home = () => {
       <div className="w-full max-w-4xl mx-auto px-4 py-8">
         {/* 価格分析セクション */}
         <div className="bg-gray-800 rounded-lg p-6 mb-8 shadow-lg">
-          <h1 className="text-2xl font-bold text-gray-300 mb-6 text-center">本日のビットコイン価格概要</h1>
+          <h1 className="text-2xl font-bold text-gray-300 mb-6 text-center">本日のビットコイン価格サマリー</h1>
 
           <div className="flex items-center text-gray-400 text-sm mb-4">
             <span>
               USD/JPY: ¥
-              {rateLoading ? '読み込み中...' : (rateError || !exchangeRate) ? '149.0' : Math.round(exchangeRate * 10) / 10}
+              {rateLoading ? '読み込み中...' : rateError ? '150.00 (デフォルト)' : exchangeRate?.toFixed(2)}
             </span>
             <TooltipIcon content="Fixer.ioから取得した最新の為替レートを使用しています。" />
           </div>
@@ -175,7 +167,7 @@ const Home = () => {
             <div className="bg-gray-700 p-4 rounded-lg hover:shadow-lg transition-shadow">
               <p className="text-gray-400 mb-2 flex items-center">
                 本日のパワーロー中央値
-                <TooltipIcon content="決定係数（R²）は、モデルの予測が実際のデータにどれだけ一致しているかを示す指標です。値が1に近いほど、モデルが実価格に正確にフィットしていることを意味します。ビットコインパワーローの中央値モデルは、全体のデータを用いて計算しています。" />
+                <TooltipIcon content="パワーロー中央値モデルによる予測価格" />
               </p>
               <p className="text-gray-200 text-2xl">{formatCurrency(powerLawPrice.jpy)}</p>
               <p className="text-gray-400 text-sm">(${powerLawPrice.usd.toLocaleString()})</p>
@@ -184,7 +176,7 @@ const Home = () => {
             <div className="bg-gray-700 p-4 rounded-lg hover:shadow-lg transition-shadow">
               <p className="text-gray-400 mb-2 flex items-center">
                 本日のパワーロー下限値
-                <TooltipIcon content="決定係数（R²）は、モデルの予測が実際のデータにどれだけ一致しているかを示す指標です。値が1に近いほど、モデルが実価格に正確にフィットしていることを意味します。ビットコインパワーローの下限値モデルでは、下限付近（実価格が下限値に近い部分）のデータを用いて計算しています。この下限値の線は、ビットコイン価格の「サポートライン（支持線）」として機能し、価格が下落した際に支える役割を果たすとされています。" />
+                <TooltipIcon content="パワーローサポートラインによる下限予測価格" />
               </p>
               <p className="text-gray-200 text-2xl">{formatCurrency(bottomPrice.jpy)}</p>
               <p className="text-gray-400 text-sm">(${bottomPrice.usd.toLocaleString()})</p>
@@ -194,7 +186,7 @@ const Home = () => {
 
         {/* パワーローチャート */}
         <div className="bg-gray-700 p-4 rounded-lg mb-8 shadow-lg">
-          <h2 className="text-lg font-semibold text-gray-300 mb-4">パワーロー チャート</h2>
+          <h2 className="text-lg font-semibold text-gray-300 mb-4">ビットコイン パワーロー チャート</h2>
           <BitcoinPowerLawChart />
         </div>
 
@@ -212,36 +204,13 @@ const Home = () => {
             to="/simulator?type=investment"
             className="w-full bg-green-500 p-4 rounded-lg text-center hover:bg-green-600 hover:scale-105 hover:shadow-lg focus:ring-2 focus:ring-green-500 focus:outline-none transition-all duration-200"
           >
-            <h3 className="text-xl font-bold text-gray-300 mb-2">ビットコイン長期投資シミュレーター</h3>
-            <p className="text-gray-200">ビットコインを増やす長期計画を立てる</p>
+            <h3 className="text-xl font-bold text-gray-300 mb-2">積み立てシミュレーター</h3>
+            <p className="text-gray-200">目標ビットコイン保有数へ向けた計画を立てる</p>
           </Link>
         </div>
 
-        {/* 広告配置 */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-10">
-          <AdPlacement position="side-mobile" />
-        </div>
-        <div className="hidden lg:block fixed right-4 top-20 w-64">
-          <AdPlacement position="side" />
-        </div>
-        <AdPlacement position="bottom" />
-      </div>
 
-      {/* フッター（コピーライト） */}
-      <footer className="w-full max-w-4xl mx-auto px-4 py-4 text-center">
-        <p className="text-sm text-gray-300">
-          © 2025 BTCパワーロー博士{' '}
-          <a
-            href="https://x.com/lovewaves711" // あなたのXアカウントURL
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-400 hover:text-blue-300"
-          >
-            @lovewaves711
-          </a>{' '}
-          All rights reserved.
-        </p>
-      </footer>
+      </div>
     </div>
   );
 };

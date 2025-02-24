@@ -351,15 +351,6 @@ const BTCWithdrawalSimulator = () => {
                     </div>
                 </div>
 
-                {/* モバイル向け下部広告 */}
-                <div className="lg:hidden fixed bottom-0 left-0 right-0 z-10">
-                    <AdPlacement position="side-mobile" />
-                </div>
-
-                {/* デスクトップ向けサイド広告 */}
-                <div className="hidden lg:block fixed right-4 top-20 w-64">
-                    <AdPlacement position="side" />
-                </div>
 
                 {results.length > 0 && (
                     <div className="mt-8 space-y-6">
@@ -414,7 +405,7 @@ const BTCWithdrawalSimulator = () => {
                                 </tbody>
                             </table>
                         </div>
-                        <AdPlacement position="bottom" />
+
                     </div>
                 )}
             </div>

@@ -43,16 +43,7 @@ const TOOLTIPS = {
   inflationRate: "年間の物価上昇率を設定します。",
 };
 
-const AdPlacement = ({ position }) => {
-  return (
-    <div className={`ad-container ${position} bg-gray-700 p-4 rounded-lg mb-4 ${position === 'side-mobile' ? 'h-[60px]' : 'h-[100px]'}`}>
-      <div className="text-xs text-gray-400 mb-2">広告</div>
-      <div className="bg-gray-600 h-full flex items-center justify-center">
-        <span className="text-gray-400">Advertisement</span>
-      </div>
-    </div>
-  );
-};
+
 
 const BTCAccumulationSimulator = () => {
   const [initialBTC, setInitialBTC] = useState("0");
@@ -213,15 +204,6 @@ const BTCAccumulationSimulator = () => {
           </div>
         </div>
 
-        {/* モバイル向け下部広告 */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-10">
-          <AdPlacement position="side-mobile" />
-        </div>
-
-        {/* デスクトップ向けサイド広告 */}
-        <div className="hidden lg:block fixed right-4 top-20 w-64">
-          <AdPlacement position="side" />
-        </div>
 
         {results.length > 0 && (
           <div className="mt-8 space-y-6">
@@ -265,7 +247,7 @@ const BTCAccumulationSimulator = () => {
                 </tbody>
               </table>
             </div>
-            <AdPlacement position="bottom" />
+
           </div>
         )}
       </div>

@@ -13,6 +13,7 @@ const COLORS = {
     median: '#00FF00',     // 緑（中央値）
     support: '#FF0000'     // 赤（下限値）
 };
+
 // 週次価格データ (以前提供されたデータを使用)
 const WEEKLY_PRICES = [
     { date: '2010-07-18', price: 0.10 },
@@ -829,7 +830,7 @@ const CustomLegend = ({ payload }) => {
     };
 
     return (
-        <div className="flex flex-wrap gap-4 justify-center md:justify-end p-2 bg-gray-900">
+        <div className="flex gap-6 justify-end">
             {payload.map((entry, index) => {
                 const label = labelMap[entry.dataKey] || entry.dataKey;
                 return (
@@ -859,13 +860,13 @@ const TooltipIcon = ({ content }) => {
 const BTCPowerLawChart = () => {
     const chartData = useMemo(() => {
         const historicalData = WEEKLY_PRICES.map(item => ({
-            date: item.date.substring(0, 7), // 年月のみ（YYYY-MM）に簡略化
+            date: item.date,
             price: Math.log10(item.price), // 対数スケール
             medianModel: Math.log10(calculateMedianPrice(calculateDaysSinceGenesis(item.date))),
             supportModel: Math.log10(calculateSupportPrice(calculateDaysSinceGenesis(item.date)))
         }));
 
-        // 未来データ（2040年まで、年月のみ）
+        // 未来データ（2040年まで）
         const futureData = [];
         if (WEEKLY_PRICES.length > 0) {
             const lastDate = new Date(WEEKLY_PRICES[WEEKLY_PRICES.length - 1].date);
@@ -876,7 +877,7 @@ const BTCPowerLawChart = () => {
                 const dateStr = currentDate.toISOString().split('T')[0];
                 const days = calculateDaysSinceGenesis(dateStr);
                 futureData.push({
-                    date: dateStr.substring(0, 7), // 年月のみ（YYYY-MM）
+                    date: dateStr,
                     medianModel: Math.log10(calculateMedianPrice(days)),
                     supportModel: Math.log10(calculateSupportPrice(days))
                 });
@@ -901,37 +902,42 @@ const BTCPowerLawChart = () => {
 
     return (
         <div className="w-full bg-gray-900 p-6 rounded-xl shadow-xl">
-            {/* タイトルと本文説明を削除 */}
 
-            {/* 決定係数の表示（ツールチップのみ） */}
-            <div className="flex flex-col md:flex-row gap-4 text-sm mb-4">
-                <div className="bg-gray-700 px-4 py-2 rounded-lg flex items-center gap-2">
-                    <span className="text-gray-400">中央値 R²:</span>
-                    <span className="text-green-400 font-mono">{chartData.rSquaredMedian.toFixed(4)}</span>
-                    <TooltipIcon content="決定係数（R²）は、モデルの予測が実際のデータにどれだけ一致しているかを示す指標です。値が1に近いほど、モデルが実価格に正確にフィットしていることを意味します。パワーローの中央値モデルは、全体のデータを用いて計算しています。" />
-                </div>
-                <div className="bg-gray-700 px-4 py-2 rounded-lg flex items-center gap-2">
-                    <span className="text-gray-400">下限付近 R²:</span>
-                    <span className="text-blue-400 font-mono">{chartData.rSquaredLowerBound.toFixed(4)}</span>
-                    <TooltipIcon content="決定係数（R²）は、モデルの予測が実際のデータにどれだけ一致しているかを示す指標です。値が1に近いほど、モデルが実価格に正確にフィットしていることを意味します。パワーローの下限値モデルでは、下限付近（実価格が下限値に近い部分）のデータを用いて計算しています。この下限値の線は、ビットコイン価格の「サポートライン（支持線）」として機能し、価格が下落した際に支える役割を果たすとされています。" />
+
+            {/* 決定係数の説明と表示（目立つ位置） */}
+            <div className="bg-gray-800 p-4 rounded-lg mb-4 shadow-md">
+                <p className="text-gray-300 text-sm mb-2">
+                    急激に上がり、その後緩やかに成長するビットコイン価格を、パワーローでモデル化しました。<br />
+                    決定係数（R²）は、モデルのデータ適合度を示します。値が1に近いほど、モデルが実価格に適合しています。
+                </p>
+                <div className="flex flex-col md:flex-row gap-4 text-sm">
+                    <div className="bg-gray-700 px-4 py-2 rounded-lg flex items-center gap-2">
+                        <span className="text-gray-400">中央値 R²:</span>
+                        <span className="text-green-400 font-mono">{chartData.rSquaredMedian.toFixed(4)}</span>
+                        <TooltipIcon content="全データを用いた決定係数（R²）です。" />
+                    </div>
+                    <div className="bg-gray-700 px-4 py-2 rounded-lg flex items-center gap-2">
+                        <span className="text-gray-400">下限付近 R²:</span>
+                        <span className="text-blue-400 font-mono">{chartData.rSquaredLowerBound.toFixed(4)}</span>
+                        <TooltipIcon content="下限付近のデータを用いた決定係数（R²）です。" />
+                    </div>
                 </div>
             </div>
 
             <div className="h-[500px]">
                 <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData.data} margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
+                    <LineChart data={chartData.data} margin={{ top: 20, right: 10, left: 60, bottom: 40 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#333" opacity={0.5} />
                         <XAxis
                             dataKey="date"
-                            tick={{ fill: '#9CA3AF', fontSize: 10 }}
+                            tick={{ fill: '#9CA3AF', fontSize: 9 }}
                             angle={-45}
                             textAnchor="end"
                             height={60}
                         />
                         <YAxis
-                            tick={{ fill: '#9CA3AF', fontSize: 10 }}
+                            tick={{ fill: '#9CA3AF', fontSize: 12 }}
                             domain={['auto', 'auto']} // 自動範囲調整
-                            width={40} // Y軸の幅を狭く
                         />
                         <Tooltip content={<CustomTooltip />} />
                         <Legend content={<CustomLegend />} />
