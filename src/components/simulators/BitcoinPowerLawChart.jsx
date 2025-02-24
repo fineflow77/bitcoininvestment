@@ -908,12 +908,12 @@ const BTCPowerLawChart = () => {
                 <div className="bg-gray-700 px-4 py-2 rounded-lg flex items-center gap-2">
                     <span className="text-gray-400">中央値 R²:</span>
                     <span className="text-green-400 font-mono">{chartData.rSquaredMedian.toFixed(4)}</span>
-                    <TooltipIcon content="全体のデータを用いた決定係数（R²）は、ビットコインパワーロー中央値モデルの適合度を示します。値が1に近いほど精度が高いです。" />
+                    <TooltipIcon content="決定係数（R²）は、モデルの予測が実際のデータにどれだけ一致しているかを示す指標です。値が1に近いほど、モデルが実価格に正確にフィットしていることを意味します。パワーローの中央値モデルは、全体のデータを用いて計算しています。" />
                 </div>
                 <div className="bg-gray-700 px-4 py-2 rounded-lg flex items-center gap-2">
                     <span className="text-gray-400">下限付近 R²:</span>
                     <span className="text-blue-400 font-mono">{chartData.rSquaredLowerBound.toFixed(4)}</span>
-                    <TooltipIcon content="下限付近のデータを用いた決定係数（R²）は、ビットコインパワーロー下限値モデルの適合度を示します。値が1に近いほど精度が高いです。" />
+                    <TooltipIcon content="決定係数（R²）は、モデルの予測が実際のデータにどれだけ一致しているかを示す指標です。値が1に近いほど、モデルが実価格に正確にフィットしていることを意味します。パワーローの下限値モデルでは、下限付近（実価格が下限値に近い部分）のデータを用いて計算しています。この下限値の線は、ビットコイン価格の「サポートライン（支持線）」として機能し、価格が下落した際に支える役割を果たすとされています。" />
                 </div>
             </div>
 
