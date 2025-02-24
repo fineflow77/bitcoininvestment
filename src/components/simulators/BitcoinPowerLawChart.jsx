@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
+import { HelpCircle } from 'lucide-react'; // HelpCircle をインポート
 
 // ビットコインの起源日
 const GENESIS_DATE = new Date('2009-01-03');
@@ -12,8 +13,6 @@ const COLORS = {
     median: '#00FF00',     // 緑（中央値）
     support: '#FF0000'     // 赤（下限値）
 };
-
-
 // 週次価格データ (以前提供されたデータを使用)
 const WEEKLY_PRICES = [
     { date: '2010-07-18', price: 0.10 },
@@ -781,9 +780,6 @@ const WEEKLY_PRICES = [
     { date: '2025-02-16', price: 98462.70 }
 ];
 
-// 週次価格データ（省略）
-// ※ 過去の価格データは省略、WEEKLY_PRICES 配列を適宜挿入してください
-
 // 決定係数（R²）の計算
 const calculateRSquared = (actualPrices, predictedPrices) => {
     if (actualPrices.length !== predictedPrices.length || actualPrices.length === 0) {
@@ -796,7 +792,7 @@ const calculateRSquared = (actualPrices, predictedPrices) => {
         sst += Math.pow(actualPrices[i] - actualMean, 2);
         sse += Math.pow(actualPrices[i] - predictedPrices[i], 2);
     }
-    return 1 - (sse / sst);
+    return 1 - (sse / sst) || 0; // NaNを0に変換
 };
 
 // モデル計算
@@ -822,11 +818,10 @@ const CustomTooltip = ({ active, payload, label }) => {
     );
 };
 
-// カスタム凡例（修正）
+// カスタム凡例
 const CustomLegend = ({ payload }) => {
     if (!payload) return null;
 
-    // `dataKey` に基づく日本語ラベルのマッピング
     const labelMap = {
         price: '実価格',
         medianModel: '中央値',
@@ -834,9 +829,9 @@ const CustomLegend = ({ payload }) => {
     };
 
     return (
-        <div className="flex gap-6 justify-end">
+        <div className="flex flex-wrap gap-4 justify-center md:justify-end p-2 bg-gray-900">
             {payload.map((entry, index) => {
-                const label = labelMap[entry.dataKey] || entry.dataKey; // マッピングがない場合はそのまま
+                const label = labelMap[entry.dataKey] || entry.dataKey;
                 return (
                     <div key={index} className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
@@ -848,18 +843,29 @@ const CustomLegend = ({ payload }) => {
     );
 };
 
+// カスタムツールチップ（TooltipIcon）を定義
+const TooltipIcon = ({ content }) => {
+    return (
+        <div className="group relative inline-block ml-2">
+            <HelpCircle className="h-4 w-4 text-gray-300 hover:text-gray-100 cursor-help transition-colors" />
+            <div className="invisible group-hover:visible absolute z-20 w-64 p-2 mt-2 text-sm text-gray-200 bg-gray-900 rounded-lg shadow-lg">
+                {content}
+            </div>
+        </div>
+    );
+};
 
 // メインコンポーネント
 const BTCPowerLawChart = () => {
     const chartData = useMemo(() => {
         const historicalData = WEEKLY_PRICES.map(item => ({
-            date: item.date,
-            price: Math.log10(item.price),
+            date: item.date.substring(0, 7), // 年月のみ（YYYY-MM）に簡略化
+            price: Math.log10(item.price), // 対数スケール
             medianModel: Math.log10(calculateMedianPrice(calculateDaysSinceGenesis(item.date))),
             supportModel: Math.log10(calculateSupportPrice(calculateDaysSinceGenesis(item.date)))
         }));
 
-        // 未来データ（2040年まで）
+        // 未来データ（2040年まで、年月のみ）
         const futureData = [];
         if (WEEKLY_PRICES.length > 0) {
             const lastDate = new Date(WEEKLY_PRICES[WEEKLY_PRICES.length - 1].date);
@@ -870,7 +876,7 @@ const BTCPowerLawChart = () => {
                 const dateStr = currentDate.toISOString().split('T')[0];
                 const days = calculateDaysSinceGenesis(dateStr);
                 futureData.push({
-                    date: dateStr,
+                    date: dateStr.substring(0, 7), // 年月のみ（YYYY-MM）
                     medianModel: Math.log10(calculateMedianPrice(days)),
                     supportModel: Math.log10(calculateSupportPrice(days))
                 });
@@ -878,47 +884,82 @@ const BTCPowerLawChart = () => {
             }
         }
 
+        // 決定係数の計算
         const actualPrices = historicalData.map(item => item.price);
         const medianPrices = historicalData.map(item => item.medianModel);
         const rSquaredMedian = calculateRSquared(actualPrices, medianPrices);
 
-        // 下限付近のデータでR²を計算
+        // 下限付近のデータでR²を計算（閾値0.2）
         const lowerBoundThreshold = 0.2;
         const lowerBoundData = historicalData.filter(item => Math.abs(item.price - item.supportModel) < lowerBoundThreshold);
         const lowerBoundActualPrices = lowerBoundData.map(item => item.price);
         const lowerBoundSupportPrices = lowerBoundData.map(item => item.supportModel);
-        const rSquaredLowerBound = calculateRSquared(lowerBoundActualPrices, lowerBoundSupportPrices);
+        const rSquaredLowerBound = calculateRSquared(lowerBoundActualPrices, lowerBoundSupportPrices) || 0;
 
         return { data: [...historicalData, ...futureData], rSquaredMedian, rSquaredLowerBound };
     }, []);
 
     return (
         <div className="w-full bg-gray-900 p-6 rounded-xl shadow-xl">
-            <h2 className="text-xl font-bold text-white mb-4">パワーロー チャート</h2>
+            {/* タイトルと本文説明を削除 */}
 
-            {/* R² の表示 */}
-            <div className="flex flex-col md:flex-row gap-4 text-sm">
-                <div className="bg-gray-800/80 px-4 py-2 rounded-lg flex items-center gap-2">
+            {/* 決定係数の表示（ツールチップのみ） */}
+            <div className="flex flex-col md:flex-row gap-4 text-sm mb-4">
+                <div className="bg-gray-700 px-4 py-2 rounded-lg flex items-center gap-2">
                     <span className="text-gray-400">中央値 R²:</span>
                     <span className="text-green-400 font-mono">{chartData.rSquaredMedian.toFixed(4)}</span>
+                    <TooltipIcon content="全体のデータを用いた決定係数（R²）は、ビットコインパワーロー中央値モデルの適合度を示します。値が1に近いほど精度が高いです。" />
                 </div>
-                <div className="bg-gray-800/80 px-4 py-2 rounded-lg flex items-center gap-2">
+                <div className="bg-gray-700 px-4 py-2 rounded-lg flex items-center gap-2">
                     <span className="text-gray-400">下限付近 R²:</span>
                     <span className="text-blue-400 font-mono">{chartData.rSquaredLowerBound.toFixed(4)}</span>
+                    <TooltipIcon content="下限付近のデータを用いた決定係数（R²）は、ビットコインパワーロー下限値モデルの適合度を示します。値が1に近いほど精度が高いです。" />
                 </div>
             </div>
 
             <div className="h-[500px]">
                 <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData.data} margin={{ top: 20, right: 30, left: 60, bottom: 40 }}>
+                    <LineChart data={chartData.data} margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#333" opacity={0.5} />
-                        <XAxis dataKey="date" tick={{ fill: '#9CA3AF', fontSize: 12 }} />
-                        <YAxis tick={{ fill: '#9CA3AF', fontSize: 12 }} />
+                        <XAxis
+                            dataKey="date"
+                            tick={{ fill: '#9CA3AF', fontSize: 10 }}
+                            angle={-45}
+                            textAnchor="end"
+                            height={60}
+                        />
+                        <YAxis
+                            tick={{ fill: '#9CA3AF', fontSize: 10 }}
+                            domain={['auto', 'auto']} // 自動範囲調整
+                            width={40} // Y軸の幅を狭く
+                        />
                         <Tooltip content={<CustomTooltip />} />
                         <Legend content={<CustomLegend />} />
-                        <Line name="実価格" type="monotone" dataKey="price" stroke={COLORS.price} dot={false} strokeWidth={2} />
-                        <Line name="中央値" type="monotone" dataKey="medianModel" stroke={COLORS.median} dot={false} strokeWidth={1.5} />
-                        <Line name="下限値" type="monotone" dataKey="supportModel" stroke={COLORS.support} strokeDasharray="3 3" dot={false} strokeWidth={1.5} />
+                        <Line
+                            name="実価格"
+                            type="monotone"
+                            dataKey="price"
+                            stroke={COLORS.price}
+                            dot={false}
+                            strokeWidth={2}
+                        />
+                        <Line
+                            name="中央値"
+                            type="monotone"
+                            dataKey="medianModel"
+                            stroke={COLORS.median}
+                            dot={false}
+                            strokeWidth={1.5}
+                        />
+                        <Line
+                            name="下限値"
+                            type="monotone"
+                            dataKey="supportModel"
+                            stroke={COLORS.support}
+                            strokeDasharray="3 3"
+                            dot={false}
+                            strokeWidth={1.5}
+                        />
                     </LineChart>
                 </ResponsiveContainer>
             </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { ChevronDown, ChevronUp, Settings, HelpCircle, Info } from "lucide-react";
+import { ChevronDown, ChevronUp, Settings, HelpCircle } from "lucide-react";
 import { STANDARD_PRICE_MODEL, CONSERVATIVE_PRICE_MODEL } from "../../constants/priceModels";
 import { formatCurrency, formatPercent, formatBTC } from "../../utils/formatters";
 
@@ -17,18 +17,17 @@ const TooltipIcon = ({ content }) => {
 
 const InputField = ({ label, tooltip, error, children }) => {
     return (
-        <div className="mb-4">
-            <div className="flex items-center mb-1">
-                <label className="text-gray-300">{label}</label>
+        <div className="mb-6">
+            <div className="flex items-center mb-2">
+                <label className="text-gray-300 font-medium">{label}</label>
                 {tooltip && <TooltipIcon content={tooltip} />}
             </div>
             {children}
-            {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
         </div>
     );
 };
 
-// デフォルト値の定義
 const DEFAULTS = {
     TAX_RATE: 20.315,
     EXCHANGE_RATE: 150,
@@ -37,7 +36,6 @@ const DEFAULTS = {
 
 const CURRENT_YEAR = new Date().getFullYear();
 
-// ツールチップコンテンツ
 const TOOLTIPS = {
     initialBTC: "現在保有しているビットコインの量を入力してください。",
     withdrawalAmount: "毎月の生活費として必要な金額を入力してください。税引き後の手取り額として計算されます。",
@@ -48,12 +46,11 @@ const TOOLTIPS = {
     inflationRate: "年間の物価上昇率を設定します。"
 };
 
-// 広告コンポーネント
 const AdPlacement = ({ position }) => {
     return (
-        <div className={`ad-container ${position} bg-gray-700 p-4 rounded-lg mb-4`}>
+        <div className={`ad-container ${position} bg-gray-700 p-4 rounded-lg mb-4 ${position === 'side-mobile' ? 'h-[60px]' : 'h-[100px]'}`}>
             <div className="text-xs text-gray-400 mb-2">広告</div>
-            <div className="bg-gray-600 h-[100px] flex items-center justify-center">
+            <div className="bg-gray-600 h-full flex items-center justify-center">
                 <span className="text-gray-400">Advertisement</span>
             </div>
         </div>
@@ -61,81 +58,46 @@ const AdPlacement = ({ position }) => {
 };
 
 const BTCWithdrawalSimulator = () => {
-    // 基本設定
     const [initialBTC, setInitialBTC] = useState("");
     const [startYear, setStartYear] = useState("2025");
     const [withdrawalType, setWithdrawalType] = useState("fixed");
     const [withdrawalAmount, setWithdrawalAmount] = useState("");
     const [withdrawalRate, setWithdrawalRate] = useState("4");
-
-    // 2段階目の設定
     const [showSecondPhase, setShowSecondPhase] = useState(false);
     const [secondPhaseYear, setSecondPhaseYear] = useState("2030");
     const [secondPhaseType, setSecondPhaseType] = useState("fixed");
     const [secondPhaseAmount, setSecondPhaseAmount] = useState("");
     const [secondPhaseRate, setSecondPhaseRate] = useState("4");
-
-    // 詳細設定
     const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
     const [taxRate, setTaxRate] = useState(DEFAULTS.TAX_RATE.toString());
     const [exchangeRate, setExchangeRate] = useState(DEFAULTS.EXCHANGE_RATE.toString());
     const [inflationRate, setInflationRate] = useState(DEFAULTS.INFLATION_RATE.toString());
     const [priceModel, setPriceModel] = useState("standard");
-
-    // 結果と状態
     const [results, setResults] = useState([]);
     const [errors, setErrors] = useState({});
 
-    // バリデーション関数
     const validateInputs = () => {
         const newErrors = {};
-
-        if (!initialBTC || isNaN(parseFloat(initialBTC)) || parseFloat(initialBTC) <= 0) {
-            newErrors.initialBTC = "ビットコイン保有数量を正しく入力してください";
-        }
-
+        if (!initialBTC || isNaN(parseFloat(initialBTC)) || parseFloat(initialBTC) <= 0) newErrors.initialBTC = "ビットコイン保有数量を正しく入力してください";
         if (withdrawalType === "fixed") {
-            if (!withdrawalAmount || isNaN(parseFloat(withdrawalAmount)) || parseFloat(withdrawalAmount) <= 0) {
-                newErrors.withdrawalAmount = "月々の取り崩し額（税引後）を正しく入力してください";
-            }
+            if (!withdrawalAmount || isNaN(parseFloat(withdrawalAmount)) || parseFloat(withdrawalAmount) <= 0) newErrors.withdrawalAmount = "月々の取り崩し額（税引後）を正しく入力してください";
         } else {
-            if (!withdrawalRate || isNaN(parseFloat(withdrawalRate)) || parseFloat(withdrawalRate) <= 0 || parseFloat(withdrawalRate) > 100) {
-                newErrors.withdrawalRate = "取り崩し率は0%から100%の間で入力してください";
-            }
+            if (!withdrawalRate || isNaN(parseFloat(withdrawalRate)) || parseFloat(withdrawalRate) <= 0 || parseFloat(withdrawalRate) > 100) newErrors.withdrawalRate = "取り崩し率は0%から100%の間で入力してください";
         }
-
         if (showSecondPhase) {
-            if (secondPhaseType === "fixed" && (!secondPhaseAmount || isNaN(parseFloat(secondPhaseAmount)) || parseFloat(secondPhaseAmount) <= 0)) {
-                newErrors.secondPhaseAmount = "2段階目の取り崩し額を正しく入力してください";
-            }
-            if (secondPhaseType === "percentage" && (!secondPhaseRate || isNaN(parseFloat(secondPhaseRate)) || parseFloat(secondPhaseRate) <= 0 || parseFloat(secondPhaseRate) > 100)) {
-                newErrors.secondPhaseRate = "2段階目の取り崩し率は0%から100%の間で入力してください";
-            }
-            if (parseInt(secondPhaseYear) <= parseInt(startYear)) {
-                newErrors.secondPhaseYear = "2段階目の開始年は取り崩し開始年より後に設定してください";
-            }
+            if (secondPhaseType === "fixed" && (!secondPhaseAmount || isNaN(parseFloat(secondPhaseAmount)) || parseFloat(secondPhaseAmount) <= 0)) newErrors.secondPhaseAmount = "2段階目の取り崩し額を正しく入力してください";
+            if (secondPhaseType === "percentage" && (!secondPhaseRate || isNaN(parseFloat(secondPhaseRate)) || parseFloat(secondPhaseRate) <= 0 || parseFloat(secondPhaseRate) > 100)) newErrors.secondPhaseRate = "2段階目の取り崩し率は0%から100%の間で入力してください";
+            if (parseInt(secondPhaseYear) <= parseInt(startYear)) newErrors.secondPhaseYear = "2段階目の開始年は取り崩し開始年より後に設定してください";
         }
-
-        if (parseFloat(taxRate) < 0 || parseFloat(taxRate) > 100) {
-            newErrors.taxRate = "税率は0%から100%の間で入力してください";
-        }
-        if (parseFloat(exchangeRate) <= 0) {
-            newErrors.exchangeRate = "為替レートは0より大きい値を入力してください";
-        }
-        if (parseFloat(inflationRate) < 0) {
-            newErrors.inflationRate = "インフレ率は0%以上で入力してください";
-        }
-
+        if (parseFloat(taxRate) < 0 || parseFloat(taxRate) > 100) newErrors.taxRate = "税率は0%から100%の間で入力してください";
+        if (parseFloat(exchangeRate) <= 0) newErrors.exchangeRate = "為替レートは0より大きい値を入力してください";
+        if (parseFloat(inflationRate) < 0) newErrors.inflationRate = "インフレ率は0%以上で入力してください";
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
-    // シミュレーション実行関数
     const simulate = () => {
-        if (!validateInputs()) {
-            return;
-        }
-
+        if (!validateInputs()) return;
         try {
             const selectedModel = priceModel === "standard" ? STANDARD_PRICE_MODEL : CONSERVATIVE_PRICE_MODEL;
             let currentBTC = parseFloat(initialBTC);
@@ -187,9 +149,7 @@ const BTCWithdrawalSimulator = () => {
                     withdrawalAmount: isBeforeStart ? "-" : withdrawalValue,
                     remainingBTC: yearEndBTC,
                     totalValue,
-                    phase: isBeforeStart ? "-" :
-                        (showSecondPhase && year >= parseInt(secondPhaseYear)) ? "2段階目" :
-                            (showSecondPhase ? "1段階目" : "-")
+                    phase: isBeforeStart ? "-" : (showSecondPhase && year >= parseInt(secondPhaseYear)) ? "2段階目" : (showSecondPhase ? "1段階目" : "-")
                 });
 
                 currentBTC = yearEndBTC;
@@ -204,39 +164,29 @@ const BTCWithdrawalSimulator = () => {
     };
 
     return (
-        <div className="w-full max-w-4xl mx-auto">
-            <AdPlacement position="top" />
-
+        <div className="w-full max-w-4xl mx-auto px-4">
             <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
                 <h1 className="text-2xl font-bold text-white text-center mb-6">
                     ビットコイン取り崩しシミュレーター
                 </h1>
 
-                <div className="space-y-4 mb-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <InputField
-                            label="保有BTC"
-                            tooltip={TOOLTIPS.initialBTC}
-                            error={errors.initialBTC}
-                        >
+                <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <InputField label="保有BTC" tooltip={TOOLTIPS.initialBTC} error={errors.initialBTC}>
                             <input
                                 type="number"
                                 value={initialBTC}
                                 onChange={(e) => setInitialBTC(e.target.value)}
-                                className="w-full bg-gray-700 p-2 rounded-md text-white"
+                                className="w-full bg-gray-700 p-2 rounded-md text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                 step="0.00000001"
                                 placeholder="例: 0.1"
                             />
                         </InputField>
-
-                        <InputField
-                            label="取り崩し開始年"
-                            error={errors.startYear}
-                        >
+                        <InputField label="取り崩し開始年" error={errors.startYear}>
                             <select
                                 value={startYear}
                                 onChange={(e) => setStartYear(e.target.value)}
-                                className="w-full bg-gray-700 p-2 rounded-md text-white"
+                                className="w-full bg-gray-700 p-2 rounded-md text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                             >
                                 {Array.from({ length: 26 }, (_, i) => CURRENT_YEAR + i).map(year => (
                                     <option key={year} value={year}>{year}年</option>
@@ -245,21 +195,17 @@ const BTCWithdrawalSimulator = () => {
                         </InputField>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <InputField
-                            label="取り崩し方法"
-                            error={errors.withdrawalType}
-                        >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <InputField label="取り崩し方法" error={errors.withdrawalType}>
                             <select
                                 value={withdrawalType}
                                 onChange={(e) => setWithdrawalType(e.target.value)}
-                                className="w-full bg-gray-700 p-2 rounded-md text-white"
+                                className="w-full bg-gray-700 p-2 rounded-md text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                             >
                                 <option value="fixed">定額（月額）</option>
                                 <option value="percentage">定率（年率）</option>
                             </select>
                         </InputField>
-
                         <InputField
                             label={withdrawalType === "fixed" ? "取り崩し額（月額、税引き後）" : "取り崩し率（年率）"}
                             tooltip={withdrawalType === "fixed" ? TOOLTIPS.withdrawalAmount : TOOLTIPS.withdrawalRate}
@@ -269,14 +215,8 @@ const BTCWithdrawalSimulator = () => {
                                 <input
                                     type="number"
                                     value={withdrawalType === "fixed" ? withdrawalAmount : withdrawalRate}
-                                    onChange={(e) => {
-                                        if (withdrawalType === "fixed") {
-                                            setWithdrawalAmount(e.target.value);
-                                        } else {
-                                            setWithdrawalRate(e.target.value);
-                                        }
-                                    }}
-                                    className="w-full bg-gray-700 p-2 rounded-md text-white pr-12"
+                                    onChange={(e) => withdrawalType === "fixed" ? setWithdrawalAmount(e.target.value) : setWithdrawalRate(e.target.value)}
+                                    className="w-full bg-gray-700 p-2 rounded-md text-white pr-12 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                     placeholder={withdrawalType === "fixed" ? "例: 200000" : "例: 4"}
                                     step={withdrawalType === "fixed" ? "1000" : "0.1"}
                                 />
@@ -298,39 +238,30 @@ const BTCWithdrawalSimulator = () => {
                             <span>2段階目の設定を有効にする</span>
                             <TooltipIcon content={TOOLTIPS.secondPhase} />
                         </label>
-
                         {showSecondPhase && (
-                            <div className="pl-6 space-y-4 border-l-2 border-gray-700">
-                                <InputField
-                                    label="2段階目開始年"
-                                    error={errors.secondPhaseYear}
-                                >
+                            <div className="pl-6 space-y-6 border-l-2 border-gray-700">
+                                <InputField label="2段階目開始年" error={errors.secondPhaseYear}>
                                     <select
                                         value={secondPhaseYear}
                                         onChange={(e) => setSecondPhaseYear(e.target.value)}
-                                        className="w-full bg-gray-700 p-2 rounded-md text-white"
+                                        className="w-full bg-gray-700 p-2 rounded-md text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                     >
                                         {Array.from({ length: 26 }, (_, i) => CURRENT_YEAR + i).map(year => (
                                             <option key={year} value={year}>{year}年</option>
                                         ))}
                                     </select>
                                 </InputField>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <InputField
-                                        label="2段階目取り崩し方法"
-                                        error={errors.secondPhaseType}
-                                    >
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <InputField label="2段階目取り崩し方法" error={errors.secondPhaseType}>
                                         <select
                                             value={secondPhaseType}
                                             onChange={(e) => setSecondPhaseType(e.target.value)}
-                                            className="w-full bg-gray-700 p-2 rounded-md text-white"
+                                            className="w-full bg-gray-700 p-2 rounded-md text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                         >
                                             <option value="fixed">定額（月額）</option>
                                             <option value="percentage">定率（年率）</option>
                                         </select>
                                     </InputField>
-
                                     <InputField
                                         label={secondPhaseType === "fixed" ? "取り崩し額（月額、税引後）" : "取り崩し率（年率）"}
                                         error={secondPhaseType === "fixed" ? errors.secondPhaseAmount : errors.secondPhaseRate}
@@ -339,14 +270,8 @@ const BTCWithdrawalSimulator = () => {
                                             <input
                                                 type="number"
                                                 value={secondPhaseType === "fixed" ? secondPhaseAmount : secondPhaseRate}
-                                                onChange={(e) => {
-                                                    if (secondPhaseType === "fixed") {
-                                                        setSecondPhaseAmount(e.target.value);
-                                                    } else {
-                                                        setSecondPhaseRate(e.target.value);
-                                                    }
-                                                }}
-                                                className="w-full bg-gray-700 p-2 rounded-md text-white pr-12"
+                                                onChange={(e) => secondPhaseType === "fixed" ? setSecondPhaseAmount(e.target.value) : setSecondPhaseRate(e.target.value)}
+                                                className="w-full bg-gray-700 p-2 rounded-md text-white pr-12 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                                 placeholder={secondPhaseType === "fixed" ? "例: 200000" : "例: 4"}
                                                 step={secondPhaseType === "fixed" ? "1000" : "0.1"}
                                             />
@@ -362,70 +287,54 @@ const BTCWithdrawalSimulator = () => {
 
                     <div className="mt-6">
                         <div
-                            className="flex items-center justify-between p-3 bg-gray-700 rounded-md cursor-pointer"
+                            className={`flex items-center justify-between p-3 rounded-md cursor-pointer transition-colors ${showAdvancedOptions ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
                             onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
                         >
                             <div className="flex items-center space-x-2">
                                 <Settings size={18} className="text-gray-300" />
-                                <span className="text-white">詳細設定</span>
+                                <span className="text-white font-medium">詳細設定</span>
                             </div>
-                            {showAdvancedOptions ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                            {showAdvancedOptions ? <ChevronUp size={18} className="text-white" /> : <ChevronDown size={18} className="text-gray-300" />}
                         </div>
-
                         {showAdvancedOptions && (
-                            <div className="mt-4 space-y-4 p-4 bg-gray-700 rounded-md">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <InputField
-                                        label="税率 (%)"
-                                        tooltip={TOOLTIPS.taxRate}
-                                        error={errors.taxRate}
-                                    >
+                            <div className="mt-4 space-y-6 p-4 bg-gray-700 rounded-md">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <InputField label="税率 (%)" tooltip={TOOLTIPS.taxRate} error={errors.taxRate}>
                                         <input
                                             type="number"
                                             value={taxRate}
                                             onChange={(e) => setTaxRate(e.target.value)}
-                                            className="w-full bg-gray-600 p-2 rounded-md text-white"
+                                            className="w-full bg-gray-600 p-2 rounded-md text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                             step="0.1"
                                         />
                                     </InputField>
-
-                                    <InputField
-                                        label="為替レート (円/USD)"
-                                        tooltip={TOOLTIPS.exchangeRate}
-                                        error={errors.exchangeRate}
-                                    >
+                                    <InputField label="為替レート (円/USD)" tooltip={TOOLTIPS.exchangeRate} error={errors.exchangeRate}>
                                         <input
                                             type="number"
                                             value={exchangeRate}
                                             onChange={(e) => setExchangeRate(e.target.value)}
-                                            className="w-full bg-gray-600 p-2 rounded-md text-white"
+                                            className="w-full bg-gray-600 p-2 rounded-md text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                             step="0.1"
                                         />
                                     </InputField>
-
-                                    <InputField
-                                        label="インフレ率 (%)"
-                                        tooltip={TOOLTIPS.inflationRate}
-                                        error={errors.inflationRate}
-                                    >
+                                    <InputField label="インフレ率 (%)" tooltip={TOOLTIPS.inflationRate} error={errors.inflationRate}>
                                         <input
                                             type="number"
                                             value={inflationRate}
                                             onChange={(e) => setInflationRate(e.target.value)}
-                                            className="w-full bg-gray-600 p-2 rounded-md text-white"
+                                            className="w-full bg-gray-600 p-2 rounded-md text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                             step="0.1"
                                         />
                                     </InputField>
                                 </div>
-
                                 <InputField label="価格予測モデル">
                                     <select
                                         value={priceModel}
                                         onChange={(e) => setPriceModel(e.target.value)}
-                                        className="w-full bg-gray-600 p-2 rounded-md text-white"
+                                        className="w-full bg-gray-600 p-2 rounded-md text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                     >
-                                        <option value="standard">標準モデル</option>
-                                        <option value="conservative">保守的モデル</option>
+                                        <option value="standard">中央値モデル</option>
+                                        <option value="conservative">下限値モデル</option>
                                     </select>
                                 </InputField>
                             </div>
@@ -435,13 +344,19 @@ const BTCWithdrawalSimulator = () => {
                     <div className="mt-6">
                         <button
                             onClick={simulate}
-                            className="w-full bg-blue-500 p-3 rounded-md text-white hover:bg-blue-600 transition-colors"
+                            className="w-full bg-blue-500 p-4 rounded-md text-white text-lg font-semibold hover:bg-blue-600 hover:scale-105 transition-transform duration-200"
                         >
                             シミュレーション実行
                         </button>
                     </div>
                 </div>
 
+                {/* モバイル向け下部広告 */}
+                <div className="lg:hidden fixed bottom-0 left-0 right-0 z-10">
+                    <AdPlacement position="side-mobile" />
+                </div>
+
+                {/* デスクトップ向けサイド広告 */}
                 <div className="hidden lg:block fixed right-4 top-20 w-64">
                     <AdPlacement position="side" />
                 </div>
@@ -453,62 +368,20 @@ const BTCWithdrawalSimulator = () => {
                             <ResponsiveContainer width="100%" height={400}>
                                 <LineChart data={results} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                                    <XAxis
-                                        dataKey="year"
-                                        stroke="#9CA3AF"
-                                    />
-                                    <YAxis
-                                        yAxisId="left"
-                                        stroke="#34D399"
-                                        label={{ value: '残存BTC', angle: -90, position: 'insideLeft' }}
-                                        tickFormatter={(value) => formatBTC(value)}
-                                    />
-                                    <YAxis
-                                        yAxisId="right"
-                                        orientation="right"
-                                        stroke="#60A5FA"
-                                        label={{
-                                            value: '資産評価額',
-                                            angle: 90,
-                                            position: 'insideRight',
-                                            offset: 10,
-                                            style: { fill: '#60A5FA', fontSize: '14px' }
-                                        }}
-                                        tickFormatter={(value) => formatCurrency(value)}
-                                        width={100}
-                                    />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#1F2937', border: 'none' }}
-                                        labelStyle={{ color: '#9CA3AF' }}
-                                        formatter={(value, name) => {
-                                            if (name === "残存BTC") return [formatBTC(value), name];
-                                            return [formatCurrency(value), name];
-                                        }}
-                                    />
+                                    <XAxis dataKey="year" stroke="#9CA3AF" />
+                                    <YAxis yAxisId="left" stroke="#34D399" label={{ value: '残存BTC', angle: -90, position: 'insideLeft' }} tickFormatter={(value) => formatBTC(value)} />
+                                    <YAxis yAxisId="right" orientation="right" stroke="#60A5FA" label={{ value: '資産評価額', angle: 90, position: 'insideRight', offset: 10, style: { fill: '#60A5FA', fontSize: '14px' } }} tickFormatter={(value) => formatCurrency(value)} width={100} />
+                                    <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: 'none' }} labelStyle={{ color: '#9CA3AF' }} formatter={(value, name) => name === "残存BTC" ? [formatBTC(value), name] : [formatCurrency(value), name]} />
                                     <Legend />
-                                    <Line
-                                        yAxisId="left"
-                                        type="monotone"
-                                        dataKey="remainingBTC"
-                                        name="残存BTC"
-                                        stroke="#34D399"
-                                        dot={false}
-                                    />
-                                    <Line
-                                        yAxisId="right"
-                                        type="monotone"
-                                        dataKey="totalValue"
-                                        name="資産評価額"
-                                        stroke="#60A5FA"
-                                        dot={false}
-                                    />
+                                    <Line yAxisId="left" type="monotone" dataKey="remainingBTC" name="残存BTC" stroke="#34D399" dot={false} />
+                                    <Line yAxisId="right" type="monotone" dataKey="totalValue" name="資産評価額" stroke="#60A5FA" dot={false} />
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
 
                         <div className="bg-gray-700 p-4 rounded-lg overflow-x-auto">
                             <table className="w-full">
-                                <thead>
+                                <thead className="sticky top-0 bg-gray-700 z-10">
                                     <tr className="text-left border-b border-gray-600">
                                         <th className="p-2 whitespace-nowrap text-gray-300">年</th>
                                         {showSecondPhase && (
@@ -525,16 +398,11 @@ const BTCWithdrawalSimulator = () => {
                                     {results.map((result, index) => (
                                         <tr
                                             key={index}
-                                            className={`
-            ${index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-700'}
-            ${showSecondPhase && result.phase === "-" ? 'text-gray-500' : 'text-gray-100'}
-        `}
+                                            className={`${index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-700'} ${showSecondPhase && result.phase === "-" ? 'text-gray-500' : 'text-gray-100'}`}
                                         >
                                             <td className="p-2 whitespace-nowrap">{result.year}</td>
                                             {showSecondPhase && (
-                                                <td className="p-2 whitespace-nowrap">
-                                                    {result.phase === "-" ? "-" : result.phase}
-                                                </td>
+                                                <td className="p-2 whitespace-nowrap">{result.phase === "-" ? "-" : result.phase}</td>
                                             )}
                                             <td className="p-2 whitespace-nowrap">{formatCurrency(result.btcPrice)}</td>
                                             <td className="p-2 whitespace-nowrap">{result.withdrawalRate === "-" ? "-" : formatPercent(result.withdrawalRate)}</td>
@@ -546,7 +414,6 @@ const BTCWithdrawalSimulator = () => {
                                 </tbody>
                             </table>
                         </div>
-
                         <AdPlacement position="bottom" />
                     </div>
                 )}
