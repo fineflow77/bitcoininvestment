@@ -130,7 +130,7 @@ const Home = () => {
       <div className="w-full max-w-4xl mx-auto px-4 py-8">
         {/* 価格分析セクション */}
         <div className="bg-gray-800 rounded-lg p-6 mb-8 shadow-lg">
-          <h1 className="text-2xl font-bold text-gray-300 mb-6 text-center">本日のビットコイン価格サマリー</h1>
+          <h1 className="text-2xl font-bold text-gray-300 mb-6 text-center">ビットコイン価格トラッカー</h1>
 
           <div className="flex items-center text-gray-400 text-sm mb-4">
             <span>
@@ -185,7 +185,7 @@ const Home = () => {
 
         {/* パワーローチャート */}
         <div className="bg-gray-700 p-4 rounded-lg mb-8 shadow-lg">
-          <h2 className="text-lg font-semibold text-gray-300 mb-4">ビットコイン パワーロー チャート</h2>
+          <h2 className="text-lg font-semibold text-gray-300 mb-4">長期パワーロー チャート</h2>
           <BitcoinPowerLawChart exchangeRate={exchangeRate || 150} />
         </div>
 

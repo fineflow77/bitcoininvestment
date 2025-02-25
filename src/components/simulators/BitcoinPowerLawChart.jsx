@@ -959,20 +959,16 @@ const BTCPowerLawChart = ({ exchangeRate = 150 }) => {
         <div className="w-full bg-gray-900 p-6 rounded-xl shadow-xl">
             {/* 決定係数の説明と表示（目立つ位置） */}
             <div className="bg-gray-800 p-4 rounded-lg mb-4 shadow-md">
-                <p className="text-gray-300 text-sm mb-2">
-                    急激に上がり、その後緩やかに成長するビットコイン価格を、パワーローでモデル化しました。<br />
-                    決定係数（R²）は、モデルのデータ適合度を示します。値が1に近いほど、モデルが実価格に適合しています。
-                </p>
                 <div className="flex flex-col md:flex-row gap-4 text-sm">
                     <div className="bg-gray-700 px-4 py-2 rounded-lg flex items-center gap-2">
                         <span className="text-gray-400">中央値 R²:</span>
                         <span className="text-green-400 font-mono">{chartData.rSquaredMedian.toFixed(4)}</span>
-                        <TooltipIcon content="全データを用いた決定係数（R²）です。" />
+                        <TooltipIcon content="全テータを用いた決定係数（R²）。1に近いほど、モデルの精度が高いです。" />
                     </div>
                     <div className="bg-gray-700 px-4 py-2 rounded-lg flex items-center gap-2">
                         <span className="text-gray-400">下限付近 R²:</span>
                         <span className="text-blue-400 font-mono">{chartData.rSquaredLowerBound.toFixed(4)}</span>
-                        <TooltipIcon content="下限付近のデータを用いた決定係数（R²）です。" />
+                        <TooltipIcon content="下限付近のデータを用いた決定係数（R²）。1に近いほど、モデルの精度が高いです。" />
                     </div>
                 </div>
             </div>
