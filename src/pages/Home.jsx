@@ -135,9 +135,8 @@ const Home = () => {
           <div className="flex items-center text-gray-400 text-sm mb-4">
             <span>
               USD/JPY: ¥
-              {rateLoading ? '読み込み中...' : rateError ? '150.00 (デフォルト)' : exchangeRate?.toFixed(2)}
+              {rateLoading ? '読み込み中...' : rateError ? '150' : exchangeRate?.toFixed(2)}
             </span>
-            <TooltipIcon content="Fixer.ioから取得した最新の為替レートを使用しています。" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
