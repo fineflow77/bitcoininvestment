@@ -804,29 +804,54 @@ const calculateDaysSinceGenesis = (dateStr) => {
 const calculateMedianPrice = (days) => Math.pow(10, -17.01593313 + 5.84509376 * Math.log10(days));
 const calculateSupportPrice = (days) => Math.pow(10, -17.668) * Math.pow(days, 5.926);
 
-// カスタムツールチップ
+// カスタムツールチップ - 修正版
 const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload || !payload.length) return null;
+
+    // 日本円表示用フォーマッタ
+    const formatCurrency = (value) => {
+        // 対数から実際の価格に変換
+        const actualPrice = Math.pow(10, value);
+
+        // 通貨フォーマット（日本語ロケールでの円表示）
+        return new Intl.NumberFormat('ja-JP', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+        }).format(actualPrice);
+    };
+
+    // 日付フォーマット
+    const formatDate = (dateStr) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('ja-JP', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+    };
+
     return (
         <div className="bg-gray-900 p-3 rounded-lg border border-gray-700 shadow-lg">
-            <p className="text-gray-200 font-bold mb-2 text-sm">{label}</p>
+            <p className="text-gray-200 font-bold mb-2 text-sm">{formatDate(label)}</p>
             {payload.map((entry, index) => (
                 <p key={index} className="text-sm" style={{ color: entry.color }}>
-                    {entry.name}: {Math.pow(10, entry.value).toLocaleString()} USD
+                    {entry.name}: {formatCurrency(entry.value)}
                 </p>
             ))}
         </div>
     );
 };
 
-// カスタム凡例
+// カスタム凡例も日本語表示に修正
 const CustomLegend = ({ payload }) => {
     if (!payload) return null;
 
     const labelMap = {
         price: '実価格',
-        medianModel: '中央値',
-        supportModel: '下限値'
+        medianModel: '中央値モデル',
+        supportModel: '下限値モデル'
     };
 
     return (
