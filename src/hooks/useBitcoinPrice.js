@@ -3,9 +3,8 @@ import { binanceClient } from '../api/binance';
 
 export const useBitcoinPrice = () => {
   const [data, setData] = useState({
-    price: null,
-    history: [],
-    exchangeRate: 150, // 初期値として150を設定
+    currentPrice: null, // 現在価格データ用に名前を変更
+    priceHistory: [], // 履歴価格データ用に名前を変更
     loading: true,
     error: null
   });
@@ -15,36 +14,35 @@ export const useBitcoinPrice = () => {
 
     const fetchData = async () => {
       try {
-        // 価格データと履歴データを並行して取得
-        const [current, history] = await Promise.all([
+        const [currentPrice, priceHistory] = await Promise.all([
           binanceClient.getCurrentPrice(),
           binanceClient.getPriceHistory()
         ]);
 
         if (!mounted) return;
 
-        if (!current) throw new Error('Failed to fetch current price');
+        if (!currentPrice) throw new Error('現在価格の取得に失敗');
+        if (!priceHistory) throw new Error('履歴価格の取得に失敗');
 
         setData({
-          price: current,
-          history: history.data,
-          exchangeRate: current.prices.exchangeRate || history.exchangeRate || 150, // 為替レートを保存
+          currentPrice: currentPrice,
+          priceHistory: priceHistory.data,
           loading: false,
           error: null
         });
       } catch (err) {
         if (!mounted) return;
-
-        setData(prev => ({
-          ...prev,
+        console.error('ビットコイン価格データの取得に失敗:', err);
+        setData({
+          currentPrice: null,
+          priceHistory: [],
           loading: false,
-          error: err.message
-        }));
+          error: err.message || 'ビットコイン価格データの取得に失敗'
+        });
       }
     };
 
     fetchData();
-    // 1分ごとに更新
     const interval = setInterval(fetchData, 60000);
 
     return () => {

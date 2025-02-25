@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { useBitcoinPrice } from '../hooks/useBitcoinPrice';
+import { useBitcoinPrice } from '../hooks/useBitcoinPrice'; // パスを変更
+import { useExchangeRate } from '../hooks/useExchangeRate'; // 新しいフックをインポート
 import { formatCurrency } from '../utils/formatters';
 import BitcoinPowerLawChart from '../components/simulators/BitcoinPowerLawChart';
 import { differenceInDays } from 'date-fns';
@@ -26,22 +27,23 @@ const AdPlacement = ({ position }) => {
     <div className={`ad-container ${position} bg-gray-700 p-4 rounded-lg mb-4 ${position === 'side-mobile' ? 'h-[60px]' : 'h-[100px]'}`}>
       <div className="text-xs text-gray-400 mb-2">広告</div>
       <div className="bg-gray-600 h-full flex items-center justify-center">
-        <span className="text-gray-400">Advertisement</span>
+        <span className="text-gray-400">広告</span>
       </div>
     </div>
   );
 };
 
 const Home = () => {
-  const { price, loading, error, exchangeRate } = useBitcoinPrice(); // 為替レートもフックから取得
+  const bitcoinPriceData = useBitcoinPrice(); // 新しいフックからデータを取得
+  const exchangeRateData = useExchangeRate(); // 新しいフックから為替レートデータを取得
   const [powerLawPrice, setPowerLawPrice] = useState({ usd: 0, jpy: 0 });
   const [bottomPrice, setBottomPrice] = useState({ usd: 0, jpy: 0 });
   const [deviation, setDeviation] = useState(0);
-  const [previousPrice, setPreviousPrice] = useState({ usd: 0, jpy: 0 }); // 前日価格を追加
+  const [previousPrice, setPreviousPrice] = useState({ usd: 0, jpy: 0 });
 
-  // 前日価格と現在価格の比較（CoinGecko API使用、精度向上）
   useEffect(() => {
-    if (!loading && !error && price?.prices) {
+    if (!bitcoinPriceData.loading && !bitcoinPriceData.error && bitcoinPriceData.currentPrice?.prices) {
+      // ... 以前の価格とパワーローモデル価格の計算 ...
       const fetchPreviousPrice = async () => {
         try {
           const response = await fetch(
@@ -53,24 +55,24 @@ const Home = () => {
             const previousEntries = data.prices.sort((a, b) => b[0] - a[0]); // 最新からソート
             const previousEntry = previousEntries.find(entry => {
               const entryTime = entry[0];
-              return currentTime - entryTime >= 86400000 && currentTime - entryTime < 86400000 * 2; // 24時間前を特定
+              return currentTime - entryTime >= 86400000 && currentTime - entryTime < 86400000 * 2; // 24 時間前のデータを特定
             });
 
             if (previousEntry) {
               const previousPriceUSD = previousEntry[1];
-              const previousJpyPrice = previousPriceUSD * exchangeRate; // binanceClientから取得した為替レートを使用
+              const previousJpyPrice = previousPriceUSD * exchangeRateData.exchangeRate; // useExchangeRate から取得した為替レートを使用
               setPreviousPrice({ usd: previousPriceUSD, jpy: previousJpyPrice });
-              console.log('前日価格（USD）:', previousPriceUSD, '現在価格（USD）:', price.prices.usd);
+              console.log('前日の価格（USD）:', previousPriceUSD, '現在の価格（USD）:', bitcoinPriceData.currentPrice.prices.usd);
             } else {
-              console.warn('24時間前のデータが見つかりません');
-              setPreviousPrice({ usd: price.prices.usd * 0.995, jpy: price.prices.jpy * 0.995 }); // 微調整（-0.5%）
+              console.warn('24 時間前のデータが見つかりません');
+              setPreviousPrice({ usd: bitcoinPriceData.currentPrice.prices.usd * 0.995, jpy: bitcoinPriceData.currentPrice.prices.jpy * 0.995 }); // 微調整（-0.5%）
             }
           } else {
-            throw new Error('前日価格データが不足しています');
+            throw new Error('前日の価格データが不足しています');
           }
         } catch (err) {
-          console.error('前日価格の取得に失敗:', err);
-          setPreviousPrice({ usd: price.prices.usd * 0.995, jpy: price.prices.jpy * 0.995 }); // 微調整（-0.5%）
+          console.error('前日の価格の取得に失敗:', err);
+          setPreviousPrice({ usd: bitcoinPriceData.currentPrice.prices.usd * 0.995, jpy: bitcoinPriceData.currentPrice.prices.jpy * 0.995 }); // 微調整（-0.5%）
         }
       };
       fetchPreviousPrice();
@@ -78,24 +80,23 @@ const Home = () => {
       const daysSinceGenesis = getDaysSinceGenesis();
 
       const medianUSD = Math.pow(10, -17.01593313 + 5.84509376 * Math.log10(daysSinceGenesis));
-      const medianJPY = medianUSD * exchangeRate; // binanceClientから取得した為替レートを使用
+      const medianJPY = medianUSD * exchangeRateData.exchangeRate; // useExchangeRate から取得した為替レートを使用
 
       const supportUSD = Math.pow(10, -17.668) * Math.pow(daysSinceGenesis, 5.926);
-      const supportJPY = supportUSD * exchangeRate; // binanceClientから取得した為替レートを使用
+      const supportJPY = supportUSD * exchangeRateData.exchangeRate; // useExchangeRate から取得した為替レートを使用
 
       setPowerLawPrice({ usd: Math.round(medianUSD), jpy: Math.round(medianJPY) });
       setBottomPrice({ usd: Math.round(supportUSD), jpy: Math.round(supportJPY) });
 
-      if (price.prices.usd) {
-        const dev = ((price.prices.usd / medianUSD) - 1) * 100;
+      if (bitcoinPriceData.currentPrice.prices.usd) {
+        const dev = ((bitcoinPriceData.currentPrice.prices.usd / medianUSD) - 1) * 100;
         setDeviation(Math.round(dev));
       }
     }
-  }, [price, exchangeRate, loading, error]);
+  }, [bitcoinPriceData, exchangeRateData]); // dependencies に exchangeRateData を追加
 
-  // 前日比の計算（USDベースでパーセンテージ、小数点第1位まで表示）
-  const priceChangePercentage = previousPrice.usd && price?.prices?.usd
-    ? Math.round(((price.prices.usd - previousPrice.usd) / previousPrice.usd) * 1000) / 10 // 小数点第1位まで
+  const priceChangePercentage = previousPrice.usd && bitcoinPriceData.currentPrice?.prices?.usd
+    ? Math.round(((bitcoinPriceData.currentPrice.prices.usd - previousPrice.usd) / previousPrice.usd) * 1000) / 10
     : 0;
 
   return (
@@ -108,7 +109,7 @@ const Home = () => {
           <div className="flex items-center text-gray-400 text-sm mb-4">
             <span>
               USD/JPY: ¥
-              {loading ? '読み込み中...' : error ? '150.00 (デフォルト)' : exchangeRate?.toFixed(2)}
+              {exchangeRateData.loading ? '読み込み中...' : exchangeRateData.error ? '150.00 (デフォルト)' : exchangeRateData.exchangeRate.toFixed(2)}
             </span>
           </div>
 
@@ -116,16 +117,16 @@ const Home = () => {
             <div className="bg-gray-700 p-4 rounded-lg hover:shadow-lg transition-shadow">
               <p className="text-gray-400 mb-2 flex items-center">
                 現在価格
-                <TooltipIcon content="Binance APIから取得した最新のBTC価格" />
+                <TooltipIcon content="Binance API から取得した最新の BTC 価格" />
               </p>
-              {loading ? (
+              {bitcoinPriceData.loading ? (
                 <div className="animate-pulse h-8 bg-gray-600 rounded w-3/4"></div>
-              ) : error ? (
+              ) : bitcoinPriceData.error ? (
                 <p className="text-red-400">エラー</p>
               ) : (
                 <>
-                  <p className="text-amber-500 text-2xl font-semibold">{formatCurrency(Math.round(price?.prices?.jpy))}</p>
-                  <p className="text-gray-400 text-sm">(${Math.round(price.prices.usd).toLocaleString()})</p>
+                  <p className="text-amber-500 text-2xl font-semibold">{formatCurrency(Math.round(bitcoinPriceData.currentPrice?.prices?.jpy))}</p>
+                  <p className="text-gray-400 text-sm">(${Math.round(bitcoinPriceData.currentPrice.prices.usd).toLocaleString()})</p>
                   <p className={`text-lg font-semibold mt-2 ${priceChangePercentage >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     前日比 {priceChangePercentage >= 0 ? '+' : ''}{priceChangePercentage}%
                   </p>
@@ -159,8 +160,12 @@ const Home = () => {
         {/* パワーローチャート */}
         <div className="bg-gray-700 p-4 rounded-lg mb-8 shadow-lg">
           <h2 className="text-lg font-semibold text-gray-300 mb-4">ビットコイン パワーロー チャート</h2>
-          {/* 修正：binanceClientから取得した為替レートを渡す */}
-          <BitcoinPowerLawChart exchangeRate={exchangeRate} />
+          {/* 修正：useExchangeRate から取得した為替レートを渡す */}
+          {!exchangeRateData.loading && !exchangeRateData.error && (
+            <BitcoinPowerLawChart exchangeRate={exchangeRateData.exchangeRate} />
+          )}
+          {exchangeRateData.loading && <p className="text-gray-400 text-center">チャート読み込み中...</p>}
+          {exchangeRateData.error && <p className="text-red-400 text-center">チャート読み込みエラー</p>}
         </div>
 
         {/* シミュレーターリンク */}

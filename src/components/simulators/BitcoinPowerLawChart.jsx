@@ -841,7 +841,7 @@ const TooltipIcon = ({ content }) => {
 };
 
 // メインコンポーネント
-const BTCPowerLawChart = ({ exchangeRate = 150 }) => {
+const BitcoinPowerLawChart = ({ exchangeRate }) => { // ここで props から exchangeRate を取得
     const chartData = useMemo(() => {
         const historicalData = WEEKLY_PRICES.map(item => ({
             date: item.date,
@@ -850,7 +850,7 @@ const BTCPowerLawChart = ({ exchangeRate = 150 }) => {
             supportModel: Math.log10(calculateSupportPrice(calculateDaysSinceGenesis(item.date)))
         }));
 
-        // 未来データ（2040年まで）
+        // 将来のデータ (2040 年まで)
         const futureData = [];
         if (WEEKLY_PRICES.length > 0) {
             const lastDate = new Date(WEEKLY_PRICES[WEEKLY_PRICES.length - 1].date);
@@ -865,7 +865,7 @@ const BTCPowerLawChart = ({ exchangeRate = 150 }) => {
                     medianModel: Math.log10(calculateMedianPrice(days)),
                     supportModel: Math.log10(calculateSupportPrice(days))
                 });
-                currentDate.setDate(currentDate.getDate() + 7); // 1週間ずつ進める
+                currentDate.setDate(currentDate.getDate() + 7); // 1 週間ずつ進める
             }
         }
 
@@ -874,7 +874,7 @@ const BTCPowerLawChart = ({ exchangeRate = 150 }) => {
         const medianPrices = historicalData.map(item => item.medianModel);
         const rSquaredMedian = calculateRSquared(actualPrices, medianPrices);
 
-        // 下限付近のデータでR²を計算（閾値0.2）
+        // 下限付近のデータで R² を計算 (閾値 0.2)
         const lowerBoundThreshold = 0.2;
         const lowerBoundData = historicalData.filter(item => Math.abs(item.price - item.supportModel) < lowerBoundThreshold);
         const lowerBoundActualPrices = lowerBoundData.map(item => item.price);
@@ -882,10 +882,9 @@ const BTCPowerLawChart = ({ exchangeRate = 150 }) => {
         const rSquaredLowerBound = calculateRSquared(lowerBoundActualPrices, lowerBoundSupportPrices) || 0;
 
         return { data: [...historicalData, ...futureData], rSquaredMedian, rSquaredLowerBound };
-    }, []);
+    }, [chartData]); // chartData 依存関係を追加
 
-    // 超シンプルなツールチップ実装
-    const ChartTooltip = ({ active, payload, label }) => {
+    const ChartTooltip = ({ active, payload, label, exchangeRate }) => {
         if (!active || !payload || !payload.length) {
             return null;
         }
@@ -919,7 +918,7 @@ const BTCPowerLawChart = ({ exchangeRate = 150 }) => {
                     // 対数から実価格に変換
                     const realValue = Math.pow(10, entry.value);
 
-                    // JPY価格を計算
+                    // JPY 価格を計算
                     const jpyValue = realValue * exchangeRate;
 
                     // シンプルな価格フォーマット
@@ -930,10 +929,10 @@ const BTCPowerLawChart = ({ exchangeRate = 150 }) => {
                         return Math.round(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
                     };
 
-                    // USD表示
+                    // USD 表示
                     const usdDisplay = `$${formatValue(realValue)}`;
 
-                    // JPY表示
+                    // JPY 表示
                     let jpyDisplay = '';
                     if (jpyValue < 1000) {
                         jpyDisplay = `¥${Math.round(jpyValue)}`;
@@ -968,13 +967,14 @@ const BTCPowerLawChart = ({ exchangeRate = 150 }) => {
         );
     };
 
+
     return (
         <div className="w-full bg-gray-900 p-6 rounded-xl shadow-xl">
             {/* 決定係数の説明と表示（目立つ位置） */}
             <div className="bg-gray-800 p-4 rounded-lg mb-4 shadow-md">
                 <p className="text-gray-300 text-sm mb-2">
                     急激に上がり、その後緩やかに成長するビットコイン価格を、パワーローでモデル化しました。<br />
-                    決定係数（R²）は、モデルのデータ適合度を示します。値が1に近いほど、モデルが実価格に適合しています。
+                    決定係数（R²）は、モデルのデータ適合度を示します。値が 1 に近いほど、モデルが実価格に適合しています。
                 </p>
                 <div className="flex flex-col md:flex-row gap-4 text-sm">
                     <div className="bg-gray-700 px-4 py-2 rounded-lg flex items-center gap-2">
@@ -1005,7 +1005,7 @@ const BTCPowerLawChart = ({ exchangeRate = 150 }) => {
                             tick={{ fill: '#9CA3AF', fontSize: 12 }}
                             domain={['auto', 'auto']} // 自動範囲調整
                         />
-                        <Tooltip content={<ChartTooltip />} />
+                        <Tooltip content={<ChartTooltip exchangeRate={exchangeRate} />} /> {/* ここで exchangeRate を渡す */}
                         <Legend content={<CustomLegend />} />
                         <Line
                             name="実価格"
@@ -1039,4 +1039,4 @@ const BTCPowerLawChart = ({ exchangeRate = 150 }) => {
     );
 };
 
-export default BTCPowerLawChart;
+export default BitcoinPowerLawChart;
