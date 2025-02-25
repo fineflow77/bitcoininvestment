@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
-import { HelpCircle } from 'lucide-react'; // HelpCircle をインポート
+import { HelpCircle } from 'lucide-react';
 
 // ビットコインの起源日
 const GENESIS_DATE = new Date('2009-01-03');
@@ -780,7 +780,6 @@ const WEEKLY_PRICES = [
     { date: '2025-02-09', price: 97573.40 },
     { date: '2025-02-16', price: 98462.70 }
 ];
-
 // 決定係数（R²）の計算
 const calculateRSquared = (actualPrices, predictedPrices) => {
     if (actualPrices.length !== predictedPrices.length || actualPrices.length === 0) {
@@ -804,32 +803,44 @@ const calculateDaysSinceGenesis = (dateStr) => {
 const calculateMedianPrice = (days) => Math.pow(10, -17.01593313 + 5.84509376 * Math.log10(days));
 const calculateSupportPrice = (days) => Math.pow(10, -17.668) * Math.pow(days, 5.926);
 
-// カスタムツールチップ - 修正版
+// カスタムツールチップ
 const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload || !payload.length) return null;
 
-    // 日本円表示用フォーマッタ
-    const formatCurrency = (value) => {
-        // 対数から実際の価格に変換
-        const actualPrice = Math.pow(10, value);
+    // シンプルな価格フォーマッタ（堅牢化）
+    const formatPrice = (value) => {
+        try {
+            // 対数から実際の価格に変換
+            const actualPrice = Math.pow(10, value);
 
-        // 通貨フォーマット（日本語ロケールでの円表示）
-        return new Intl.NumberFormat('ja-JP', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2
-        }).format(actualPrice);
+            // 小数点以下の桁数を価格に応じて調整
+            let decimals = 2;
+            if (actualPrice < 1) decimals = 4;
+            else if (actualPrice > 10000) decimals = 0;
+
+            // 数値を手動でフォーマット
+            const parts = actualPrice.toFixed(decimals).split('.');
+            // 3桁ごとにカンマを挿入
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+            return `$${parts.join('.')}`;
+        } catch (error) {
+            console.error('価格フォーマットエラー:', error);
+            return `$${value}`;
+        }
     };
 
-    // 日付フォーマット
+    // シンプルな日付フォーマット
     const formatDate = (dateStr) => {
-        const date = new Date(dateStr);
-        return date.toLocaleDateString('ja-JP', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
+        try {
+            const date = new Date(dateStr);
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            return `${year}年${month}月${day}日`;
+        } catch (error) {
+            return dateStr;
+        }
     };
 
     return (
@@ -837,14 +848,14 @@ const CustomTooltip = ({ active, payload, label }) => {
             <p className="text-gray-200 font-bold mb-2 text-sm">{formatDate(label)}</p>
             {payload.map((entry, index) => (
                 <p key={index} className="text-sm" style={{ color: entry.color }}>
-                    {entry.name}: {formatCurrency(entry.value)}
+                    {entry.name}: {formatPrice(entry.value)}
                 </p>
             ))}
         </div>
     );
 };
 
-// カスタム凡例も日本語表示に修正
+// カスタム凡例
 const CustomLegend = ({ payload }) => {
     if (!payload) return null;
 
@@ -927,8 +938,6 @@ const BTCPowerLawChart = () => {
 
     return (
         <div className="w-full bg-gray-900 p-6 rounded-xl shadow-xl">
-
-
             {/* 決定係数の説明と表示（目立つ位置） */}
             <div className="bg-gray-800 p-4 rounded-lg mb-4 shadow-md">
                 <p className="text-gray-300 text-sm mb-2">
