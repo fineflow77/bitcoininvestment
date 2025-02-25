@@ -884,73 +884,86 @@ const BTCPowerLawChart = ({ exchangeRate = 150 }) => {
         return { data: [...historicalData, ...futureData], rSquaredMedian, rSquaredLowerBound };
     }, []);
 
-    // カスタムツールチップを内部関数として定義
+    // 超シンプルなツールチップ実装
     const ChartTooltip = ({ active, payload, label }) => {
-        if (!active || !payload || !payload.length) return null;
-
-        // 為替レートを使用して価格をフォーマット
-        const formatPrice = (logValue) => {
-            try {
-                // 対数から実際の価格に変換（USD）
-                const priceUSD = Math.pow(10, logValue);
-
-                // 日本円に変換
-                const priceJPY = priceUSD * exchangeRate;
-
-                // USD表示
-                let usdDisplay = '';
-                if (priceUSD < 1) {
-                    usdDisplay = '$' + priceUSD.toFixed(4);
-                } else if (priceUSD < 10) {
-                    usdDisplay = '$' + priceUSD.toFixed(2);
-                } else if (priceUSD < 1000) {
-                    usdDisplay = '$' + Math.round(priceUSD);
-                } else if (priceUSD < 1000000) {
-                    usdDisplay = '$' + Math.round(priceUSD).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                } else {
-                    usdDisplay = '$' + Math.round(priceUSD / 1000) + 'K';
-                }
-
-                // JPY表示
-                let jpyDisplay = '';
-                if (priceJPY < 1000) {
-                    jpyDisplay = '¥' + Math.round(priceJPY);
-                } else if (priceJPY < 1000000) {
-                    jpyDisplay = '¥' + Math.round(priceJPY).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                } else if (priceJPY < 1000000000) {
-                    jpyDisplay = '¥' + Math.round(priceJPY / 10000) + '万';
-                } else {
-                    jpyDisplay = '¥' + (priceJPY / 100000000).toFixed(2) + '億';
-                }
-
-                return jpyDisplay + ' (' + usdDisplay + ')';
-            } catch (e) {
-                console.error('価格変換エラー:', e);
-                return '計算エラー';
-            }
-        };
+        if (!active || !payload || !payload.length) {
+            return null;
+        }
 
         // 簡易日付フォーマット
         const formatSimpleDate = (dateStr) => {
             try {
                 const parts = dateStr.split('-');
-                if (parts.length === 3) {
-                    return parts[0] + '年' + parts[1] + '月' + parts[2] + '日';
-                }
-                return dateStr;
+                return parts.length === 3 ? `${parts[0]}年${parts[1]}月${parts[2]}日` : dateStr;
             } catch (e) {
                 return dateStr;
             }
         };
 
         return (
-            <div className="bg-gray-900 p-3 rounded-lg border border-gray-700 shadow-lg">
-                <p className="text-gray-200 font-bold mb-2 text-sm">{formatSimpleDate(label)}</p>
-                {payload.map((entry, index) => (
-                    <p key={index} className="text-sm" style={{ color: entry.color }}>
-                        {entry.name}: {formatPrice(entry.value)}
-                    </p>
-                ))}
+            <div style={{
+                backgroundColor: '#222',
+                padding: '10px',
+                border: '1px solid #444',
+                borderRadius: '4px'
+            }}>
+                <p style={{
+                    color: '#fff',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    marginBottom: '5px'
+                }}>
+                    {formatSimpleDate(label)}
+                </p>
+                {payload.map((entry, index) => {
+                    // 対数から実価格に変換
+                    const realValue = Math.pow(10, entry.value);
+
+                    // JPY価格を計算
+                    const jpyValue = realValue * exchangeRate;
+
+                    // シンプルな価格フォーマット
+                    const formatValue = (value) => {
+                        if (value < 1) return value.toFixed(4);
+                        if (value < 10) return value.toFixed(2);
+                        if (value < 1000) return Math.round(value);
+                        return Math.round(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                    };
+
+                    // USD表示
+                    const usdDisplay = `$${formatValue(realValue)}`;
+
+                    // JPY表示
+                    let jpyDisplay = '';
+                    if (jpyValue < 1000) {
+                        jpyDisplay = `¥${Math.round(jpyValue)}`;
+                    } else if (jpyValue < 1000000) {
+                        jpyDisplay = `¥${Math.round(jpyValue).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+                    } else if (jpyValue < 100000000) {
+                        jpyDisplay = `¥${Math.round(jpyValue / 10000)}万`;
+                    } else {
+                        jpyDisplay = `¥${(jpyValue / 100000000).toFixed(2)}億`;
+                    }
+
+                    // 表示名の変換
+                    const nameMap = {
+                        price: '実価格',
+                        medianModel: '中央値モデル',
+                        supportModel: '下限値モデル'
+                    };
+
+                    const displayName = nameMap[entry.dataKey] || entry.name;
+
+                    return (
+                        <p key={index} style={{
+                            color: entry.color,
+                            fontSize: '12px',
+                            margin: '3px 0'
+                        }}>
+                            {displayName}: {jpyDisplay} ({usdDisplay})
+                        </p>
+                    );
+                })}
             </div>
         );
     };
@@ -959,16 +972,20 @@ const BTCPowerLawChart = ({ exchangeRate = 150 }) => {
         <div className="w-full bg-gray-900 p-6 rounded-xl shadow-xl">
             {/* 決定係数の説明と表示（目立つ位置） */}
             <div className="bg-gray-800 p-4 rounded-lg mb-4 shadow-md">
+                <p className="text-gray-300 text-sm mb-2">
+                    急激に上がり、その後緩やかに成長するビットコイン価格を、パワーローでモデル化しました。<br />
+                    決定係数（R²）は、モデルのデータ適合度を示します。値が1に近いほど、モデルが実価格に適合しています。
+                </p>
                 <div className="flex flex-col md:flex-row gap-4 text-sm">
                     <div className="bg-gray-700 px-4 py-2 rounded-lg flex items-center gap-2">
                         <span className="text-gray-400">中央値 R²:</span>
                         <span className="text-green-400 font-mono">{chartData.rSquaredMedian.toFixed(4)}</span>
-                        <TooltipIcon content="全テータを用いた決定係数（R²）。1に近いほど、モデルの精度が高いです。" />
+                        <TooltipIcon content="全データを用いた決定係数（R²）です。" />
                     </div>
                     <div className="bg-gray-700 px-4 py-2 rounded-lg flex items-center gap-2">
                         <span className="text-gray-400">下限付近 R²:</span>
                         <span className="text-blue-400 font-mono">{chartData.rSquaredLowerBound.toFixed(4)}</span>
-                        <TooltipIcon content="下限付近のデータを用いた決定係数（R²）。1に近いほど、モデルの精度が高いです。" />
+                        <TooltipIcon content="下限付近のデータを用いた決定係数（R²）です。" />
                     </div>
                 </div>
             </div>

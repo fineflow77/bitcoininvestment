@@ -33,38 +33,11 @@ const AdPlacement = ({ position }) => {
 };
 
 const Home = () => {
-  const { price, loading, error } = useBitcoinPrice(); // 現在価格のみ提供と仮定
-  const [exchangeRate, setExchangeRate] = useState(null); // APIから取得
+  const { price, loading, error, exchangeRate } = useBitcoinPrice(); // 為替レートもフックから取得
   const [powerLawPrice, setPowerLawPrice] = useState({ usd: 0, jpy: 0 });
   const [bottomPrice, setBottomPrice] = useState({ usd: 0, jpy: 0 });
   const [deviation, setDeviation] = useState(0);
-  const [rateLoading, setRateLoading] = useState(true);
-  const [rateError, setRateError] = useState(null);
   const [previousPrice, setPreviousPrice] = useState({ usd: 0, jpy: 0 }); // 前日価格を追加
-
-  // Fixer.io APIから為替レートを取得
-  useEffect(() => {
-    const fetchExchangeRate = async () => {
-      try {
-        const response = await fetch(
-          `http://data.fixer.io/api/latest?access_key=c13d30131de502b47745aaea8e58c20c&symbols=USD,JPY`
-        );
-        const data = await response.json();
-        if (data.success) {
-          const rate = data.rates.JPY / data.rates.USD; // USD/JPYレート
-          setExchangeRate(parseFloat(rate.toFixed(2))); // 小数点2桁で設定
-          setRateLoading(false);
-        } else {
-          throw new Error(data.error.info || '為替レートの取得に失敗しました');
-        }
-      } catch (err) {
-        setRateError(err.message);
-        setExchangeRate(150.00); // フォールバック値（画像のUSD/JPY: ¥150に合わせる）
-        setRateLoading(false);
-      }
-    };
-    fetchExchangeRate();
-  }, []);
 
   // 前日価格と現在価格の比較（CoinGecko API使用、精度向上）
   useEffect(() => {
@@ -85,7 +58,7 @@ const Home = () => {
 
             if (previousEntry) {
               const previousPriceUSD = previousEntry[1];
-              const previousJpyPrice = previousPriceUSD * (exchangeRate || 149); // JPYに変換
+              const previousJpyPrice = previousPriceUSD * exchangeRate; // binanceClientから取得した為替レートを使用
               setPreviousPrice({ usd: previousPriceUSD, jpy: previousJpyPrice });
               console.log('前日価格（USD）:', previousPriceUSD, '現在価格（USD）:', price.prices.usd);
             } else {
@@ -105,10 +78,10 @@ const Home = () => {
       const daysSinceGenesis = getDaysSinceGenesis();
 
       const medianUSD = Math.pow(10, -17.01593313 + 5.84509376 * Math.log10(daysSinceGenesis));
-      const medianJPY = medianUSD * (exchangeRate || 149);
+      const medianJPY = medianUSD * exchangeRate; // binanceClientから取得した為替レートを使用
 
       const supportUSD = Math.pow(10, -17.668) * Math.pow(daysSinceGenesis, 5.926);
-      const supportJPY = supportUSD * (exchangeRate || 149);
+      const supportJPY = supportUSD * exchangeRate; // binanceClientから取得した為替レートを使用
 
       setPowerLawPrice({ usd: Math.round(medianUSD), jpy: Math.round(medianJPY) });
       setBottomPrice({ usd: Math.round(supportUSD), jpy: Math.round(supportJPY) });
@@ -130,12 +103,12 @@ const Home = () => {
       <div className="w-full max-w-4xl mx-auto px-4 py-8">
         {/* 価格分析セクション */}
         <div className="bg-gray-800 rounded-lg p-6 mb-8 shadow-lg">
-          <h1 className="text-2xl font-bold text-gray-300 mb-6 text-center">ビットコイン価格トラッカー</h1>
+          <h1 className="text-2xl font-bold text-gray-300 mb-6 text-center">ビットコイン市場ダッシュボード</h1>
 
           <div className="flex items-center text-gray-400 text-sm mb-4">
             <span>
               USD/JPY: ¥
-              {rateLoading ? '読み込み中...' : rateError ? '150' : exchangeRate?.toFixed(2)}
+              {loading ? '読み込み中...' : error ? '150.00 (デフォルト)' : exchangeRate?.toFixed(2)}
             </span>
           </div>
 
@@ -143,7 +116,7 @@ const Home = () => {
             <div className="bg-gray-700 p-4 rounded-lg hover:shadow-lg transition-shadow">
               <p className="text-gray-400 mb-2 flex items-center">
                 現在価格
-                <TooltipIcon content="CoinGeckoから取得した最新のBTC価格" />
+                <TooltipIcon content="Binance APIから取得した最新のBTC価格" />
               </p>
               {loading ? (
                 <div className="animate-pulse h-8 bg-gray-600 rounded w-3/4"></div>
@@ -185,8 +158,9 @@ const Home = () => {
 
         {/* パワーローチャート */}
         <div className="bg-gray-700 p-4 rounded-lg mb-8 shadow-lg">
-          <h2 className="text-lg font-semibold text-gray-300 mb-4">長期パワーロー チャート</h2>
-          <BitcoinPowerLawChart exchangeRate={exchangeRate || 150} />
+          <h2 className="text-lg font-semibold text-gray-300 mb-4">ビットコイン パワーロー チャート</h2>
+          {/* 修正：binanceClientから取得した為替レートを渡す */}
+          <BitcoinPowerLawChart exchangeRate={exchangeRate} />
         </div>
 
         {/* シミュレーターリンク */}
@@ -207,7 +181,6 @@ const Home = () => {
             <p className="text-gray-200">目標ビットコイン保有数へ向けた計画を立てる</p>
           </Link>
         </div>
-
       </div>
     </div>
   );

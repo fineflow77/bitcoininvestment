@@ -5,6 +5,7 @@ export const useBitcoinPrice = () => {
   const [data, setData] = useState({
     price: null,
     history: [],
+    exchangeRate: 150, // 初期値として150を設定
     loading: true,
     error: null
   });
@@ -26,7 +27,8 @@ export const useBitcoinPrice = () => {
 
         setData({
           price: current,
-          history,
+          history: history.data,
+          exchangeRate: current.prices.exchangeRate || history.exchangeRate || 150, // 為替レートを保存
           loading: false,
           error: null
         });
