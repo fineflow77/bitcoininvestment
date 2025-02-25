@@ -52,7 +52,7 @@ const Home = () => {
         const data = await response.json();
         if (data.success) {
           const rate = data.rates.JPY / data.rates.USD; // USD/JPYレート
-          setExchangeRate(parseFloat(rate.toFixed(2))); // ★ 修正: 小数点2桁で設定
+          setExchangeRate(parseFloat(rate.toFixed(2))); // 小数点2桁で設定
           setRateLoading(false);
         } else {
           throw new Error(data.error.info || '為替レートの取得に失敗しました');
@@ -187,7 +187,7 @@ const Home = () => {
         {/* パワーローチャート */}
         <div className="bg-gray-700 p-4 rounded-lg mb-8 shadow-lg">
           <h2 className="text-lg font-semibold text-gray-300 mb-4">ビットコイン パワーロー チャート</h2>
-          <BitcoinPowerLawChart />
+          <BitcoinPowerLawChart exchangeRate={exchangeRate || 150} />
         </div>
 
         {/* シミュレーターリンク */}
@@ -208,7 +208,6 @@ const Home = () => {
             <p className="text-gray-200">目標ビットコイン保有数へ向けた計画を立てる</p>
           </Link>
         </div>
-
 
       </div>
     </div>

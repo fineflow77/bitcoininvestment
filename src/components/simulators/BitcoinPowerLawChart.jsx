@@ -13,7 +13,6 @@ const COLORS = {
     median: '#00FF00',     // 緑（中央値）
     support: '#FF0000'     // 赤（下限値）
 };
-
 // 週次価格データ (以前提供されたデータを使用)
 const WEEKLY_PRICES = [
     { date: '2010-07-18', price: 0.10 },
@@ -780,6 +779,7 @@ const WEEKLY_PRICES = [
     { date: '2025-02-09', price: 97573.40 },
     { date: '2025-02-16', price: 98462.70 }
 ];
+
 // 決定係数（R²）の計算
 const calculateRSquared = (actualPrices, predictedPrices) => {
     if (actualPrices.length !== predictedPrices.length || actualPrices.length === 0) {
@@ -802,58 +802,6 @@ const calculateDaysSinceGenesis = (dateStr) => {
 };
 const calculateMedianPrice = (days) => Math.pow(10, -17.01593313 + 5.84509376 * Math.log10(days));
 const calculateSupportPrice = (days) => Math.pow(10, -17.668) * Math.pow(days, 5.926);
-
-// カスタムツールチップ
-const CustomTooltip = ({ active, payload, label }) => {
-    if (!active || !payload || !payload.length) return null;
-
-    // シンプルな価格フォーマッタ（堅牢化）
-    const formatPrice = (value) => {
-        try {
-            // 対数から実際の価格に変換
-            const actualPrice = Math.pow(10, value);
-
-            // 小数点以下の桁数を価格に応じて調整
-            let decimals = 2;
-            if (actualPrice < 1) decimals = 4;
-            else if (actualPrice > 10000) decimals = 0;
-
-            // 数値を手動でフォーマット
-            const parts = actualPrice.toFixed(decimals).split('.');
-            // 3桁ごとにカンマを挿入
-            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-            return `$${parts.join('.')}`;
-        } catch (error) {
-            console.error('価格フォーマットエラー:', error);
-            return `$${value}`;
-        }
-    };
-
-    // シンプルな日付フォーマット
-    const formatDate = (dateStr) => {
-        try {
-            const date = new Date(dateStr);
-            const year = date.getFullYear();
-            const month = date.getMonth() + 1;
-            const day = date.getDate();
-            return `${year}年${month}月${day}日`;
-        } catch (error) {
-            return dateStr;
-        }
-    };
-
-    return (
-        <div className="bg-gray-900 p-3 rounded-lg border border-gray-700 shadow-lg">
-            <p className="text-gray-200 font-bold mb-2 text-sm">{formatDate(label)}</p>
-            {payload.map((entry, index) => (
-                <p key={index} className="text-sm" style={{ color: entry.color }}>
-                    {entry.name}: {formatPrice(entry.value)}
-                </p>
-            ))}
-        </div>
-    );
-};
 
 // カスタム凡例
 const CustomLegend = ({ payload }) => {
@@ -893,7 +841,7 @@ const TooltipIcon = ({ content }) => {
 };
 
 // メインコンポーネント
-const BTCPowerLawChart = () => {
+const BTCPowerLawChart = ({ exchangeRate = 150 }) => {
     const chartData = useMemo(() => {
         const historicalData = WEEKLY_PRICES.map(item => ({
             date: item.date,
@@ -936,6 +884,77 @@ const BTCPowerLawChart = () => {
         return { data: [...historicalData, ...futureData], rSquaredMedian, rSquaredLowerBound };
     }, []);
 
+    // カスタムツールチップを内部関数として定義
+    const ChartTooltip = ({ active, payload, label }) => {
+        if (!active || !payload || !payload.length) return null;
+
+        // 為替レートを使用して価格をフォーマット
+        const formatPrice = (logValue) => {
+            try {
+                // 対数から実際の価格に変換（USD）
+                const priceUSD = Math.pow(10, logValue);
+
+                // 日本円に変換
+                const priceJPY = priceUSD * exchangeRate;
+
+                // USD表示
+                let usdDisplay = '';
+                if (priceUSD < 1) {
+                    usdDisplay = '$' + priceUSD.toFixed(4);
+                } else if (priceUSD < 10) {
+                    usdDisplay = '$' + priceUSD.toFixed(2);
+                } else if (priceUSD < 1000) {
+                    usdDisplay = '$' + Math.round(priceUSD);
+                } else if (priceUSD < 1000000) {
+                    usdDisplay = '$' + Math.round(priceUSD).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                } else {
+                    usdDisplay = '$' + Math.round(priceUSD / 1000) + 'K';
+                }
+
+                // JPY表示
+                let jpyDisplay = '';
+                if (priceJPY < 1000) {
+                    jpyDisplay = '¥' + Math.round(priceJPY);
+                } else if (priceJPY < 1000000) {
+                    jpyDisplay = '¥' + Math.round(priceJPY).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                } else if (priceJPY < 1000000000) {
+                    jpyDisplay = '¥' + Math.round(priceJPY / 10000) + '万';
+                } else {
+                    jpyDisplay = '¥' + (priceJPY / 100000000).toFixed(2) + '億';
+                }
+
+                return jpyDisplay + ' (' + usdDisplay + ')';
+            } catch (e) {
+                console.error('価格変換エラー:', e);
+                return '計算エラー';
+            }
+        };
+
+        // 簡易日付フォーマット
+        const formatSimpleDate = (dateStr) => {
+            try {
+                const parts = dateStr.split('-');
+                if (parts.length === 3) {
+                    return parts[0] + '年' + parts[1] + '月' + parts[2] + '日';
+                }
+                return dateStr;
+            } catch (e) {
+                return dateStr;
+            }
+        };
+
+        return (
+            <div className="bg-gray-900 p-3 rounded-lg border border-gray-700 shadow-lg">
+                <p className="text-gray-200 font-bold mb-2 text-sm">{formatSimpleDate(label)}</p>
+                {payload.map((entry, index) => (
+                    <p key={index} className="text-sm" style={{ color: entry.color }}>
+                        {entry.name}: {formatPrice(entry.value)}
+                    </p>
+                ))}
+            </div>
+        );
+    };
+
     return (
         <div className="w-full bg-gray-900 p-6 rounded-xl shadow-xl">
             {/* 決定係数の説明と表示（目立つ位置） */}
@@ -973,7 +992,7 @@ const BTCPowerLawChart = () => {
                             tick={{ fill: '#9CA3AF', fontSize: 12 }}
                             domain={['auto', 'auto']} // 自動範囲調整
                         />
-                        <Tooltip content={<CustomTooltip />} />
+                        <Tooltip content={<ChartTooltip />} />
                         <Legend content={<CustomLegend />} />
                         <Line
                             name="実価格"
