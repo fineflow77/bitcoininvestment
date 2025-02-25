@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
@@ -11,7 +11,15 @@ const GENESIS_DATE = new Date('2009-01-03');
 const COLORS = {
     price: '#FFA500',      // オレンジ（実価格）
     median: '#00FF00',     // 緑（中央値）
-    support: '#FF0000'     // 赤（下限値）
+    support: '#FF0000',     // 赤（下限値）
+    peakDecay: '#FFFF00'   // 黄色（抵抗線/ピークディケイ） // ★追加：抵抗線の色
+};
+
+// キャッシュ
+const chartDataCache = {
+    data: null,
+    timestamp: null,
+    CACHE_TIME: 6 * 60 * 60 * 1000, // 6時間キャッシュ
 };
 // 週次価格データ (以前提供されたデータを使用)
 const WEEKLY_PRICES = [
@@ -780,6 +788,12 @@ const WEEKLY_PRICES = [
     { date: '2025-02-16', price: 98462.70 }
 ];
 
+// 抵抗線（ピークディケイ）の計算関数 (★修正：下限値モデルとの比率で計算)
+const calculatePeakDecay = (days) => {
+    const supportPrice = calculateSupportPrice(days); // 下限値モデル価格を取得
+    return supportPrice * (1 + Math.pow(10, 1.838 - days * 0.0002332)); // 下限値モデル価格に比率を乗算
+};
+
 // 決定係数（R²）の計算
 const calculateRSquared = (actualPrices, predictedPrices) => {
     if (actualPrices.length !== predictedPrices.length || actualPrices.length === 0) {
@@ -803,6 +817,7 @@ const calculateDaysSinceGenesis = (dateStr) => {
 const calculateMedianPrice = (days) => Math.pow(10, -17.01593313 + 5.84509376 * Math.log10(days));
 const calculateSupportPrice = (days) => Math.pow(10, -17.668) * Math.pow(days, 5.926);
 
+
 // カスタム凡例
 const CustomLegend = ({ payload }) => {
     if (!payload) return null;
@@ -810,7 +825,8 @@ const CustomLegend = ({ payload }) => {
     const labelMap = {
         price: '実価格',
         medianModel: '中央値モデル',
-        supportModel: '下限値モデル'
+        supportModel: '下限値モデル',
+        peakDecayModel: '抵抗線モデル' // ★追加：抵抗線の凡例
     };
 
     return (
@@ -840,203 +856,255 @@ const TooltipIcon = ({ content }) => {
     );
 };
 
+// ChartTooltip コンポーネントを BitcoinPowerLawChart より前に定義
+const ChartTooltip = ({ active, payload, label, exchangeRate }) => {
+    if (!active || !payload || !payload.length) {
+        return null;
+    }
+
+    // 簡易日付フォーマット
+    const formatSimpleDate = (dateStr) => {
+        try {
+            const parts = dateStr.split('-');
+            return parts.length === 3 ? `${parts[0]}年${parts[1]}月${parts[2]}日` : dateStr;
+        } catch (e) {
+            return dateStr;
+        }
+    };
+
+    return (
+        <div style={{
+            backgroundColor: '#222',
+            padding: '10px',
+            border: '1px solid #444',
+            borderRadius: '4px'
+        }}>
+            <p style={{
+                color: '#fff',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                marginBottom: '5px'
+            }}>
+                {formatSimpleDate(label)}
+            </p>
+            {payload.map((entry, index) => {
+                // 対数から実価格に変換
+                const realValue = Math.pow(10, entry.value);
+
+                // JPY 価格を計算
+                const jpyValue = realValue * exchangeRate;
+
+                // シンプルな価格フォーマット
+                const formatValue = (value) => {
+                    if (value < 1) return value.toFixed(4);
+                    if (value < 10) return value.toFixed(2);
+                    if (value < 1000) return Math.round(value);
+                    return Math.round(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                };
+
+                // USD 表示
+                const usdDisplay = `$${formatValue(realValue)}`;
+
+                // JPY 表示
+                let jpyDisplay = '';
+                if (jpyValue < 1000) {
+                    jpyDisplay = `¥${Math.round(jpyValue)}`;
+                } else if (jpyValue < 1000000) {
+                    jpyDisplay = `¥${Math.round(jpyValue).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+                } else if (jpyValue < 100000000) {
+                    jpyDisplay = `¥${Math.round(jpyValue / 10000)}万`;
+                } else {
+                    jpyDisplay = `¥${(jpyValue / 100000000).toFixed(2)}億`;
+                }
+
+                // 表示名の変換
+                const nameMap = {
+                    price: '実価格',
+                    medianModel: '中央値モデル',
+                    supportModel: '下限値モデル',
+                    peakDecayModel: '抵抗線モデル' // ★追加：抵抗線の表示名
+                };
+
+                const displayName = nameMap[entry.dataKey] || entry.name;
+
+                return (
+                    <p key={index} style={{
+                        color: entry.color,
+                        fontSize: '12px',
+                        margin: '3px 0'
+                    }}>
+                        {displayName}: {jpyDisplay} ({usdDisplay})
+                    </p>
+                );
+            })}
+        </div>
+    );
+};
+
+
 // メインコンポーネント
-const BitcoinPowerLawChart = ({ exchangeRate }) => { // ここで props から exchangeRate を取得
-    const chartData = useMemo(() => {
-        const historicalData = WEEKLY_PRICES.map(item => ({
-            date: item.date,
-            price: Math.log10(item.price), // 対数スケール
-            medianModel: Math.log10(calculateMedianPrice(calculateDaysSinceGenesis(item.date))),
-            supportModel: Math.log10(calculateSupportPrice(calculateDaysSinceGenesis(item.date)))
-        }));
+const BitcoinPowerLawChart = ({ exchangeRate }) => {
+    const [chartDataState, setChartDataState] = useState({
+        loading: false,
+        data: null,
+        rSquaredMedian: 0,
+        rSquaredLowerBound: 0,
+        error: null,
+    });
 
-        // 将来のデータ (2040 年まで)
-        const futureData = [];
-        if (WEEKLY_PRICES.length > 0) {
-            const lastDate = new Date(WEEKLY_PRICES[WEEKLY_PRICES.length - 1].date);
-            const endDate = new Date('2040-12-31');
-            let currentDate = new Date(lastDate);
+    useEffect(() => {
+        const fetchChartData = async () => {
+            setChartDataState({ ...chartDataState, loading: true, error: null });
 
-            while (currentDate <= endDate) {
-                const dateStr = currentDate.toISOString().split('T')[0];
-                const days = calculateDaysSinceGenesis(dateStr);
-                futureData.push({
-                    date: dateStr,
-                    medianModel: Math.log10(calculateMedianPrice(days)),
-                    supportModel: Math.log10(calculateSupportPrice(days))
-                });
-                currentDate.setDate(currentDate.getDate() + 7); // 1 週間ずつ進める
+            // キャッシュがあれば利用
+            if (chartDataCache.data && chartDataCache.timestamp && Date.now() - chartDataCache.timestamp < chartDataCache.CACHE_TIME) {
+                console.log('チャートデータ：キャッシュから取得');
+                setChartDataState({ ...chartDataState, loading: false, ...chartDataCache.data, error: null });
+                return;
             }
-        }
 
-        // 決定係数の計算
-        const actualPrices = historicalData.map(item => item.price);
-        const medianPrices = historicalData.map(item => item.medianModel);
-        const rSquaredMedian = calculateRSquared(actualPrices, medianPrices);
-
-        // 下限付近のデータで R² を計算 (閾値 0.2)
-        const lowerBoundThreshold = 0.2;
-        const lowerBoundData = historicalData.filter(item => Math.abs(item.price - item.supportModel) < lowerBoundThreshold);
-        const lowerBoundActualPrices = lowerBoundData.map(item => item.price);
-        const lowerBoundSupportPrices = lowerBoundData.map(item => item.supportModel);
-        const rSquaredLowerBound = calculateRSquared(lowerBoundActualPrices, lowerBoundSupportPrices) || 0;
-
-        return { data: [...historicalData, ...futureData], rSquaredMedian, rSquaredLowerBound };
-    }, [chartData]); // chartData 依存関係を追加
-
-    const ChartTooltip = ({ active, payload, label, exchangeRate }) => {
-        if (!active || !payload || !payload.length) {
-            return null;
-        }
-
-        // 簡易日付フォーマット
-        const formatSimpleDate = (dateStr) => {
             try {
-                const parts = dateStr.split('-');
-                return parts.length === 3 ? `${parts[0]}年${parts[1]}月${parts[2]}日` : dateStr;
-            } catch (e) {
-                return dateStr;
+                console.log('チャートデータ：WEEKLY_PRICES から生成');
+
+                // **ここが WEEKLY_PRICES データの挿入箇所です**
+                const historicalData = WEEKLY_PRICES.map(item => ({
+                    date: item.date,
+                    price: item.price > 0 ? Math.log10(item.price) : null, // 対数スケール, 価格が0以下の場合はnull
+                    medianModel: Math.log10(calculateMedianPrice(calculateDaysSinceGenesis(item.date))),
+                    supportModel: Math.log10(calculateSupportPrice(calculateDaysSinceGenesis(item.date))),
+                    peakDecayModel: Math.log10(calculatePeakDecay(calculateDaysSinceGenesis(item.date))), // ★修正：抵抗線モデルの計算に修正した関数を使用
+                }));
+
+                // 将来のデータ (2040 年まで) は既存のロジックを再利用
+                const futureData = [];
+                if (WEEKLY_PRICES.length > 0) {
+                    const lastDate = new Date(WEEKLY_PRICES[WEEKLY_PRICES.length - 1].date);
+                    const endDate = new Date('2040-12-31');
+                    let currentDate = new Date(lastDate);
+
+                    while (currentDate <= endDate) {
+                        const dateStr = currentDate.toISOString().split('T')[0];
+                        const days = calculateDaysSinceGenesis(dateStr);
+                        futureData.push({
+                            date: dateStr,
+                            medianModel: Math.log10(calculateMedianPrice(days)),
+                            supportModel: Math.log10(calculateSupportPrice(days)),
+                            peakDecayModel: Math.log10(calculatePeakDecay(days)), // ★修正：抵抗線モデル（将来データ）も修正後の関数を使用
+                        });
+                        currentDate.setDate(currentDate.getDate() + 7); // 1 週間ずつ進める
+                    }
+                }
+
+
+                // 決定係数の計算 (既存のロジックを再利用)
+                const actualPrices = historicalData.map(item => item.price).filter(price => typeof price === 'number'); // filter out null values for R² calculation
+                const medianPrices = historicalData.map(item => item.medianModel).filter(price => typeof price === 'number');
+                const rSquaredMedian = calculateRSquared(actualPrices, medianPrices);
+
+                const lowerBoundThreshold = 0.2;
+                const lowerBoundData = historicalData.filter(item => Math.abs(item.price - item.supportModel) < lowerBoundThreshold && typeof item.price === 'number'); // filter out null values
+                const lowerBoundActualPrices = lowerBoundData.map(item => item.price);
+                const lowerBoundSupportPrices = lowerBoundData.map(item => item.supportModel);
+                const rSquaredLowerBound = calculateRSquared(lowerBoundActualPrices, lowerBoundSupportPrices) || 0;
+
+
+                const chartData = { data: [...historicalData, ...futureData], rSquaredMedian, rSquaredLowerBound };
+                chartDataCache.data = chartData; // キャッシュに保存
+                chartDataCache.timestamp = Date.now();
+                setChartDataState({ loading: false, ...chartData, error: null });
+
+
+            } catch (error) {
+                console.error("チャートデータ処理中にエラーが発生しました", error);
+                setChartDataState({ ...chartDataState, loading: false, error: error });
             }
         };
 
-        return (
-            <div style={{
-                backgroundColor: '#222',
-                padding: '10px',
-                border: '1px solid #444',
-                borderRadius: '4px'
-            }}>
-                <p style={{
-                    color: '#fff',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    marginBottom: '5px'
-                }}>
-                    {formatSimpleDate(label)}
-                </p>
-                {payload.map((entry, index) => {
-                    // 対数から実価格に変換
-                    const realValue = Math.pow(10, entry.value);
+        fetchChartData();
+    }, []);
 
-                    // JPY 価格を計算
-                    const jpyValue = realValue * exchangeRate;
 
-                    // シンプルな価格フォーマット
-                    const formatValue = (value) => {
-                        if (value < 1) return value.toFixed(4);
-                        if (value < 10) return value.toFixed(2);
-                        if (value < 1000) return Math.round(value);
-                        return Math.round(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                    };
-
-                    // USD 表示
-                    const usdDisplay = `$${formatValue(realValue)}`;
-
-                    // JPY 表示
-                    let jpyDisplay = '';
-                    if (jpyValue < 1000) {
-                        jpyDisplay = `¥${Math.round(jpyValue)}`;
-                    } else if (jpyValue < 1000000) {
-                        jpyDisplay = `¥${Math.round(jpyValue).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
-                    } else if (jpyValue < 100000000) {
-                        jpyDisplay = `¥${Math.round(jpyValue / 10000)}万`;
-                    } else {
-                        jpyDisplay = `¥${(jpyValue / 100000000).toFixed(2)}億`;
-                    }
-
-                    // 表示名の変換
-                    const nameMap = {
-                        price: '実価格',
-                        medianModel: '中央値モデル',
-                        supportModel: '下限値モデル'
-                    };
-
-                    const displayName = nameMap[entry.dataKey] || entry.name;
-
-                    return (
-                        <p key={index} style={{
-                            color: entry.color,
-                            fontSize: '12px',
-                            margin: '3px 0'
-                        }}>
-                            {displayName}: {jpyDisplay} ({usdDisplay})
-                        </p>
-                    );
-                })}
-            </div>
-        );
-    };
+    const chartData = useMemo(() => {
+        return chartDataState;
+    }, [chartDataState]);
 
 
     return (
         <div className="w-full bg-gray-900 p-6 rounded-xl shadow-xl">
             {/* 決定係数の説明と表示（目立つ位置） */}
             <div className="bg-gray-800 p-4 rounded-lg mb-4 shadow-md">
-                <p className="text-gray-300 text-sm mb-2">
-                    急激に上がり、その後緩やかに成長するビットコイン価格を、パワーローでモデル化しました。<br />
-                    決定係数（R²）は、モデルのデータ適合度を示します。値が 1 に近いほど、モデルが実価格に適合しています。
-                </p>
                 <div className="flex flex-col md:flex-row gap-4 text-sm">
                     <div className="bg-gray-700 px-4 py-2 rounded-lg flex items-center gap-2">
                         <span className="text-gray-400">中央値 R²:</span>
-                        <span className="text-green-400 font-mono">{chartData.rSquaredMedian.toFixed(4)}</span>
-                        <TooltipIcon content="全データを用いた決定係数（R²）です。" />
+                        <span className="text-green-400 font-mono">{chartData.rSquaredMedian?.toFixed(4) || 'loading...'}</span>
+                        <TooltipIcon content="全データを用いた決定係数（R²）です。1に近いほどモデルの精度が高いです。" />
                     </div>
                     <div className="bg-gray-700 px-4 py-2 rounded-lg flex items-center gap-2">
                         <span className="text-gray-400">下限付近 R²:</span>
-                        <span className="text-blue-400 font-mono">{chartData.rSquaredLowerBound.toFixed(4)}</span>
-                        <TooltipIcon content="下限付近のデータを用いた決定係数（R²）です。" />
+                        <span className="text-blue-400 font-mono">{chartData.rSquaredLowerBound?.toFixed(4) || 'loading...'}</span>
+                        <TooltipIcon content="下限付近のデータを用いた決定係数（R²）です。1に近いほどモデルの精度が高いです。" />
                     </div>
                 </div>
             </div>
 
+
             <div className="h-[500px]">
-                <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData.data} margin={{ top: 20, right: 10, left: 60, bottom: 40 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#333" opacity={0.5} />
-                        <XAxis
-                            dataKey="date"
-                            tick={{ fill: '#9CA3AF', fontSize: 9 }}
-                            angle={-45}
-                            textAnchor="end"
-                            height={60}
-                        />
-                        <YAxis
-                            tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                            domain={['auto', 'auto']} // 自動範囲調整
-                        />
-                        <Tooltip content={<ChartTooltip exchangeRate={exchangeRate} />} /> {/* ここで exchangeRate を渡す */}
-                        <Legend content={<CustomLegend />} />
-                        <Line
-                            name="実価格"
-                            type="monotone"
-                            dataKey="price"
-                            stroke={COLORS.price}
-                            dot={false}
-                            strokeWidth={2}
-                        />
-                        <Line
-                            name="中央値"
-                            type="monotone"
-                            dataKey="medianModel"
-                            stroke={COLORS.median}
-                            dot={false}
-                            strokeWidth={1.5}
-                        />
-                        <Line
-                            name="下限値"
-                            type="monotone"
-                            dataKey="supportModel"
-                            stroke={COLORS.support}
-                            strokeDasharray="3 3"
-                            dot={false}
-                            strokeWidth={1.5}
-                        />
-                    </LineChart>
-                </ResponsiveContainer>
+                {chartDataState.loading ? (
+                    <div className="text-center text-gray-400">チャートデータ読み込み中...</div>
+                ) : chartDataState.error ? (
+                    <div className="text-center text-red-400">チャートデータ読み込みエラー: {chartDataState.error.message}</div>
+                ) : chartDataState.data ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={chartData.data} margin={{ top: 20, right: 10, left: 60, bottom: 40 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#333" opacity={0.5} />
+                            <XAxis
+                                dataKey="date"
+                                tick={{ fill: '#9CA3AF', fontSize: 9 }}
+                                angle={-45}
+                                textAnchor="end"
+                                height={60}
+                            />
+                            <YAxis
+                                tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                                domain={['auto', 'auto']} // 自動範囲調整
+                            />
+                            <Tooltip content={<ChartTooltip exchangeRate={exchangeRate} />} /> {/* ここで exchangeRate を渡す */}
+                            <Legend content={<CustomLegend />} />
+                            <Line
+                                name="実価格"
+                                type="monotone"
+                                dataKey="price"
+                                stroke={COLORS.price}
+                                dot={false}
+                                strokeWidth={2}
+                            />
+                            <Line
+                                name="中央値モデル"
+                                type="monotone"
+                                dataKey="medianModel"
+                                stroke={COLORS.median}
+                                dot={false}
+                                strokeWidth={1.5}
+                            />
+                            <Line
+                                name="下限値モデル"
+                                type="monotone"
+                                dataKey="supportModel"
+                                stroke={COLORS.support}
+                                strokeDasharray="3 3"
+                                dot={false}
+                                strokeWidth={1.5}
+                            />
+                            {/* ★追加：抵抗線（ピークディケイ）の Line 要素 - dataKey を修正 */}
+
+                        </LineChart>
+                    </ResponsiveContainer>
+                ) : (
+                    <div className="text-center text-gray-400">チャートデータがありません</div>
+                )}
             </div>
         </div>
     );
 };
 
-export default BitcoinPowerLawChart;
+export default React.memo(BitcoinPowerLawChart);

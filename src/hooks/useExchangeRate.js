@@ -1,48 +1,48 @@
-import { useState, useEffect } from 'react';
-import { binanceClient } from '../api/binance';
+import { useState, useEffect } from 'react'; // import 文をファイルの先頭に移動
+
+// キャッシュ時間 (30分) 為替レートは変動が少ないため長めに設定
+const CACHE_TIME = 30 * 60 * 1000;
+const cache = {
+    data: null,
+    timestamp: null,
+};
 
 export const useExchangeRate = () => {
     const [exchangeRateData, setExchangeRateData] = useState({
-        exchangeRate: 150, // 初期値はまだ設定、ローディング中に使用
-        loading: true,
-        error: null
+        loading: false,
+        exchangeRate: 150.00, // デフォルト値を設定
+        error: null,
     });
 
     useEffect(() => {
-        let mounted = true;
-
         const fetchExchangeRate = async () => {
+            setExchangeRateData({ ...exchangeRateData, loading: true, error: null });
+
+            // キャッシュがあればそれを返す
+            if (cache.data && cache.timestamp && Date.now() - cache.timestamp < CACHE_TIME) {
+                console.log('為替レート：キャッシュから取得');
+                setExchangeRateData({ loading: false, exchangeRate: cache.data, error: null });
+                return;
+            }
+
             try {
-                const currentPriceData = await binanceClient.getCurrentPrice();
-                if (!mounted) return;
-
-                if (!currentPriceData || !currentPriceData.prices || !currentPriceData.prices.exchangeRate) {
-                    throw new Error('為替レートデータの取得に失敗');
+                console.log('為替レート：APIリクエスト');
+                const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-
-                setExchangeRateData({
-                    exchangeRate: currentPriceData.prices.exchangeRate,
-                    loading: false,
-                    error: null
-                });
-            } catch (err) {
-                if (!mounted) return;
-                console.error('為替レートの取得に失敗:', err);
-                setExchangeRateData({
-                    exchangeRate: 150, // エラー時のデフォルト値
-                    loading: false,
-                    error: err.message || '為替レートの取得に失敗'
-                });
+                const data = await response.json();
+                const rate = data.rates.JPY;
+                cache.data = rate;
+                cache.timestamp = Date.now();
+                setExchangeRateData({ loading: false, exchangeRate: rate, error: null });
+            } catch (error) {
+                console.error("為替レートの取得に失敗しました", error);
+                setExchangeRateData({ loading: false, exchangeRate: 150.00, error: error }); // エラー時もデフォルト値を維持
             }
         };
 
         fetchExchangeRate();
-        const interval = setInterval(fetchExchangeRate, 300000); // 5 分ごとにリフレッシュ
-
-        return () => {
-            mounted = false;
-            clearInterval(interval);
-        };
     }, []);
 
     return exchangeRateData;
