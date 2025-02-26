@@ -47,7 +47,10 @@ const TOOLTIPS = {
   initialBtcHolding: "すでに保有しているビットコインの量（BTC）を入力してください。",
   monthlyInvestment: "毎月積み立てる金額（円）を入力してください。",
   years: "投資を行う期間（年数）を指定します。投資期間が終了した後も2050年まで資産推移を予測します。",
-  priceModel: "標準モデル：HC Burgerが提唱するパワーロー方程式を基に、2039年以降滑らかに減衰し2050年で1000万ドルに到達すると仮定。ビットコインが従来の法定通貨に代わる世界的な基軸通貨になるシナリオ（ビットコインスタンダード）。\保守的モデル：HC Burgerが提唱するパワーロー方程式を控えめに調整し、2039年以降滑らかに減衰し2050年で400万ドルに到達すると仮定。ビットコインがゴールド（金）の4倍程度の時価総額になり、価値の保存手段の定番になるシナリオ。",
+  priceModel: <React.Fragment>
+    <p>標準モデル：HC Burgerが提唱するパワーロー方程式を基に、2039年以降滑らかに減衰し2050年で1000万ドルに到達すると仮定。ビットコインが従来の法定通貨に代わる世界的な基軸通貨になるシナリオ（ビットコインスタンダード）。</p>
+    <p className="mt-2">保守的モデル：HC Burgerが提唱するパワーロー方程式を控えめに調整し、2039年以降滑らかに減衰し2050年で400万ドルに到達すると仮定。ビットコインがゴールド（金）の4倍程度の時価総額になり、価値の保存手段の定番になるシナリオ。</p>
+  </React.Fragment>,
   exchangeRate: "円ドルの為替レートを設定します。",
   inflationRate: "年間の物価上昇率を設定します。",
 };
@@ -192,7 +195,7 @@ const InvestmentSimulator = () => {
               <div className="relative"><input type="number" value={monthlyInvestment} onChange={(e) => setMonthlyInvestment(e.target.value)} className="w-full bg-gray-700 p-2 rounded-md text-white pr-12 focus:ring-2 focus:ring-blue-500 focus:outline-none" step="1000" placeholder="例: 10000" /><span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">円</span></div>
             </InputField>
 
-            <InputField label="投資年数" tooltip={TOOLTIPS.years} error={errors.years}>
+            <InputField label="積み立て年数" tooltip={TOOLTIPS.years} error={errors.years}>
               <input type="number" value={years} onChange={(e) => setYears(e.target.value)} className="w-full bg-gray-700 p-2 rounded-md text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" step="1" placeholder="例: 10" />
             </InputField>
           </div>
