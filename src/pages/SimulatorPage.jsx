@@ -29,21 +29,7 @@ const SimulatorPage = () => {
       ) : (
         <InvestmentSimulator />
       )}
-      {/* フッター追加 */}
-      <footer className="text-center text-gray-400 mt-8 py-4 border-t border-gray-800">
-        <p>
-          © {new Date().getFullYear()} BTCパワーロー博士{' '}
-          <a
-            href="https://x.com/lovewaves711"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            @lovewaves711
-          </a>
-          . All rights reserved.
-        </p>
-      </footer>
+
     </div>
   );
 };
