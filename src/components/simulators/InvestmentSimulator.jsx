@@ -200,6 +200,19 @@ const InvestmentSimulator = () => {
             </InputField>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <InputField label="価格予測モデル" tooltip={TOOLTIPS.priceModel}>
+              <select
+                value={priceModel}
+                onChange={(e) => setPriceModel(e.target.value)}
+                className="w-full bg-gray-700 p-2 rounded-md text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              >
+                <option value="standard">標準モデル</option>
+                <option value="conservative">保守的モデル</option>
+              </select>
+            </InputField>
+          </div>
+
           <div className="mt-4">
             <div className={`flex items-center justify-between p-3 rounded-md cursor-pointer transition-colors ${showAdvancedOptions ? 'bg-blue-700' : 'bg-gray-700 hover:bg-gray-600'}`} onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}>
               <div className="flex items-center space-x-2"><Settings size={18} className="text-gray-300" /><span className="text-white font-medium text-sm">詳細設定</span></div>
