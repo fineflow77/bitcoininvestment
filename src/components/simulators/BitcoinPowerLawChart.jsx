@@ -824,8 +824,8 @@ const CustomLegend = ({ payload }) => {
 
     const labelMap = {
         price: '実価格',
-        medianModel: '中央値モデル',
-        supportModel: '下限値モデル',
+        medianModel: '中央値（推定）',
+        supportModel: '下限値（推定）',
         peakDecayModel: '抵抗線モデル' // ★追加：抵抗線の凡例
     };
 
@@ -920,8 +920,8 @@ const ChartTooltip = ({ active, payload, label, exchangeRate }) => {
                 // 表示名の変換
                 const nameMap = {
                     price: '実価格',
-                    medianModel: '中央値モデル',
-                    supportModel: '下限値モデル',
+                    medianModel: '中央値（推定価格）',
+                    supportModel: '下限値（推定価格）',
                     peakDecayModel: '抵抗線モデル' // ★追加：抵抗線の表示名
                 };
 

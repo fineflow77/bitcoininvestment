@@ -1,4 +1,4 @@
-// src/components/Home.js
+// src/pages/Home.js
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useBitcoinPrice } from '../hooks/useBitcoinPrice';
@@ -125,7 +125,7 @@ const Home = () => {
       <div className="w-full max-w-4xl mx-auto px-4 py-8">
         {/* 価格分析セクション */}
         <div className="bg-gray-800 rounded-lg p-6 mb-8 shadow-lg">
-          <h1 className="text-2xl font-bold text-gray-300 mb-6 text-center">ビットコイン市場ダッシュボード</h1>
+          <h1 className="text-2xl font-bold text-gray-300 mb-6 text-center">ビットコイン価格トラッカー</h1>
 
           <div className="flex items-center text-gray-400 text-sm mb-4">
             <span>
@@ -138,7 +138,6 @@ const Home = () => {
             <div className="bg-gray-700 p-4 rounded-lg hover:shadow-lg transition-shadow">
               <p className="text-gray-400 mb-2 flex items-center">
                 現在価格
-                <TooltipIcon content="Binance API から取得した最新の BTC 価格" />
               </p>
               {bitcoinPriceData.loading ? (
                 <div className="animate-pulse h-8 bg-gray-600 rounded w-3/4"></div>
@@ -166,7 +165,7 @@ const Home = () => {
             <div className="bg-gray-700 p-4 rounded-lg hover:shadow-lg transition-shadow">
               <p className="text-gray-400 mb-2 flex items-center">
                 本日のパワーロー中央値
-                <TooltipIcon content="パワーロー中央値モデルによる予測価格" />
+                <TooltipIcon content="グラフの緑の線が示す推定価格（中央値）" />
               </p>
               {powerLawPrice === null ? ( // powerLawPrice が null の場合
                 <div className="animate-pulse h-8 bg-gray-600 rounded w-1/2"></div> // ローディング表示
@@ -183,7 +182,7 @@ const Home = () => {
             <div className="bg-gray-700 p-4 rounded-lg hover:shadow-lg transition-shadow">
               <p className="text-gray-400 mb-2 flex items-center">
                 本日のパワーロー下限値
-                <TooltipIcon content="パワーローサポートラインによる下限予測価格" />
+                <TooltipIcon content="グラフの赤の点線（サポートライン）が示す推定価格（下限値）" />
               </p>
               {bottomPrice === null ? ( // bottomPrice が null の場合
                 <div className="animate-pulse h-8 bg-gray-600 rounded w-1/2"></div> // ローディング表示
@@ -223,6 +222,22 @@ const Home = () => {
             <p className="text-gray-200">目標ビットコイン保有数へ向けた計画を立てる</p>
           </Link>
         </div>
+
+        {/* フッター - Reactの構文に修正 */}
+        <footer className="text-center text-gray-400 mt-8 py-4 border-t border-gray-800">
+          <p>
+            &copy; {new Date().getFullYear()} BTCパワーロー博士{' '}
+            <a
+              href="https://x.com/lovewaves711"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              @lovewaves711
+            </a>
+            . All rights reserved.
+          </p>
+        </footer>
       </div>
     </div>
   );
