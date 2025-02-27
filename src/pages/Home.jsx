@@ -164,8 +164,8 @@ const Home = () => {
 
             <div className="bg-gray-700 p-4 rounded-lg hover:shadow-lg transition-shadow">
               <p className="text-gray-400 mb-2 flex items-center">
-                本日のパワーロー中央値
-                <TooltipIcon content="グラフの緑の線が示す推定価格（中央値）" />
+                本日のパワーロー中央価格
+                <TooltipIcon content="パワーローモデルによる推定中央価格" />
               </p>
               {powerLawPrice === null ? ( // powerLawPrice が null の場合
                 <div className="animate-pulse h-8 bg-gray-600 rounded w-1/2"></div> // ローディング表示
@@ -176,13 +176,13 @@ const Home = () => {
                 </>
               )}
               {/* パワーロー中央値表示部分の条件分岐をログ出力 */}
-              {console.log('パワーロー中央値表示: powerLawPrice === null?', powerLawPrice === null)}
+              {console.log('パワーロー中央価格表示: powerLawPrice === null?', powerLawPrice === null)}
             </div>
 
             <div className="bg-gray-700 p-4 rounded-lg hover:shadow-lg transition-shadow">
               <p className="text-gray-400 mb-2 flex items-center">
-                本日のパワーロー下限値
-                <TooltipIcon content="グラフの赤の点線（サポートライン）が示す推定価格（下限値）" />
+                本日のパワーロー下限価格
+                <TooltipIcon content="パワーローモデルによる推定下限価格（サポートライン）" />
               </p>
               {bottomPrice === null ? ( // bottomPrice が null の場合
                 <div className="animate-pulse h-8 bg-gray-600 rounded w-1/2"></div> // ローディング表示
@@ -192,8 +192,8 @@ const Home = () => {
                   <p className="text-gray-400 text-sm">(${bottomPrice.usd.toLocaleString()})</p>
                 </>
               )}
-              {/* パワーロー下限値表示部分の条件分岐をログ出力 */}
-              {console.log('パワーロー下限値表示: bottomPrice === null?', bottomPrice === null)}
+              {/* パワーロー下限価格表示部分の条件分岐をログ出力 */}
+              {console.log('パワーロー下限価格表示: bottomPrice === null?', bottomPrice === null)}
             </div>
           </div>
         </div>

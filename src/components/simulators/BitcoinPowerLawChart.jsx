@@ -823,9 +823,9 @@ const CustomLegend = ({ payload }) => {
     if (!payload) return null;
 
     const labelMap = {
-        price: '実価格',
-        medianModel: '中央値（推定）',
-        supportModel: '下限値（推定）',
+        price: '実際価格',
+        medianModel: 'パワーロー中央価格',
+        supportModel: 'パワーロー下限価格',
         peakDecayModel: '抵抗線モデル' // ★追加：抵抗線の凡例
     };
 
@@ -919,9 +919,9 @@ const ChartTooltip = ({ active, payload, label, exchangeRate }) => {
 
                 // 表示名の変換
                 const nameMap = {
-                    price: '実価格',
-                    medianModel: '中央値（推定価格）',
-                    supportModel: '下限値（推定価格）',
+                    price: '実際価格',
+                    medianModel: 'パワーロー中央価格',
+                    supportModel: 'パワーロー下限価格',
                     peakDecayModel: '抵抗線モデル' // ★追加：抵抗線の表示名
                 };
 
@@ -1035,12 +1035,12 @@ const BitcoinPowerLawChart = ({ exchangeRate }) => {
             <div className="bg-gray-800 p-4 rounded-lg mb-4 shadow-md">
                 <div className="flex flex-col md:flex-row gap-4 text-sm">
                     <div className="bg-gray-700 px-4 py-2 rounded-lg flex items-center gap-2">
-                        <span className="text-gray-400">中央値 R²:</span>
+                        <span className="text-gray-400">中央価格 R²:</span>
                         <span className="text-green-400 font-mono">{chartData.rSquaredMedian?.toFixed(4) || 'loading...'}</span>
                         <TooltipIcon content="全データを用いた決定係数（R²）です。1に近いほどモデルの精度が高いです。" />
                     </div>
                     <div className="bg-gray-700 px-4 py-2 rounded-lg flex items-center gap-2">
-                        <span className="text-gray-400">下限付近 R²:</span>
+                        <span className="text-gray-400">下限価格R²:</span>
                         <span className="text-blue-400 font-mono">{chartData.rSquaredLowerBound?.toFixed(4) || 'loading...'}</span>
                         <TooltipIcon content="下限付近のデータを用いた決定係数（R²）です。1に近いほどモデルの精度が高いです。" />
                     </div>
@@ -1071,7 +1071,7 @@ const BitcoinPowerLawChart = ({ exchangeRate }) => {
                             <Tooltip content={<ChartTooltip exchangeRate={exchangeRate} />} /> {/* ここで exchangeRate を渡す */}
                             <Legend content={<CustomLegend />} />
                             <Line
-                                name="実価格"
+                                name="実際価格"
                                 type="monotone"
                                 dataKey="price"
                                 stroke={COLORS.price}
@@ -1079,7 +1079,7 @@ const BitcoinPowerLawChart = ({ exchangeRate }) => {
                                 strokeWidth={2}
                             />
                             <Line
-                                name="中央値モデル"
+                                name="パワーロー中央価格"
                                 type="monotone"
                                 dataKey="medianModel"
                                 stroke={COLORS.median}
@@ -1087,7 +1087,7 @@ const BitcoinPowerLawChart = ({ exchangeRate }) => {
                                 strokeWidth={1.5}
                             />
                             <Line
-                                name="下限値モデル"
+                                name="パワーロー下限価格"
                                 type="monotone"
                                 dataKey="supportModel"
                                 stroke={COLORS.support}
