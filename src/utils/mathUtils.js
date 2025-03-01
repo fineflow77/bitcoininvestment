@@ -36,22 +36,22 @@ export const calculatePowerLawPosition = (price, medianPrice, supportPrice, resi
     }
 };
 
-// 分位点に基づく市場状態ラベル
+// src/utils/mathUtils.js
 export const getPowerLawPositionLabel = (positionData) => {
     if (!positionData) return '計算不可';
 
     const { position, zone } = positionData;
-    const normalizedPosition = Math.max(0, Math.min(2, position)); // 0〜2の範囲に正規化
+    // normalizedPosition は不要なので削除
 
     if (zone === "lower") {
         if (position < 0.2) return '非常に割安';
         if (position < 0.4) return '割安';
-        if (position < 0.6) return 'やや割安'; // 修正: 0.7 -> 0.6
-        if (position < 0.8) return '適正範囲';  // 修正: 0.9 -> 0.8
-        return '中央値付近';
+        if (position < 0.6) return 'やや割安'; // 0.6未満なら「やや割安」
+        if (position < 0.8) return '適正範囲';  //0.6以上、0.8未満
+        return '中央値付近'; // 0.8以上なら「中央値付近」
     } else { // upper
-        if (position < 1.2) return '中央値付近'; // 修正: 1.1 -> 1.2
-        if (position < 1.4) return '適正範囲';  // 修正: 1.3 -> 1.4
+        if (position < 1.2) return '中央値付近';
+        if (position < 1.4) return '適正範囲';
         if (position < 1.6) return 'やや割高';
         if (position < 1.8) return '割高';
         return '非常に割高';

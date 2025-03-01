@@ -1,27 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { differenceInDays } from 'date-fns';
-import { HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import BitcoinPowerLawChart from '../components/simulators/BitcoinPowerLawChart';
 import useBitcoinChartData from '../hooks/useBitcoinChartData';
 import { formatCurrency } from '../utils/formatters';
 import { useExchangeRate } from '../hooks/useExchangeRate';
-import { calculatePowerLawPosition, getPowerLawPositionLabel, getPowerLawPositionColor } from '../utils/mathUtils';
+// import { calculatePowerLawPosition, getPowerLawPositionLabel, getPowerLawPositionColor } from '../utils/mathUtils'; // 使わないので削除
+
 
 
 const BITCOIN_GENESIS_DATE = new Date(2009, 0, 3);
 const getDaysSinceGenesis = () => differenceInDays(new Date(), BITCOIN_GENESIS_DATE);
-
-// TooltipIcon の修正
-const TooltipIcon = ({ content }) => (
-  <div className="group relative inline-block ml-2">
-    <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-300 cursor-help transition-colors" />
-    <div className="invisible group-hover:visible absolute z-10 w-64 p-2 mt-2 text-sm text-gray-300 bg-gray-800 rounded-lg shadow-lg -translate-x-1/2 left-1/2">
-      <div>{content}</div> {/* div で囲む */}
-    </div>
-  </div>
-);
-
 
 const Home = () => {
   const exchangeRateData = useExchangeRate();
@@ -40,8 +29,6 @@ const Home = () => {
       const deviationFromSupport = ((currentJPY / supportJPY) - 1) * 100;
 
       setBuyRecommendation(deviationFromSupport <= threshold && deviationFromSupport >= -threshold);
-
-
     }
   }, [chartData, exchangeRateData.exchangeRate]);
 
@@ -75,48 +62,22 @@ const Home = () => {
                   <p className={`text-lg font-semibold mt-2 ${priceChangePercentage >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     前日比 {priceChangePercentage >= 0 ? '+' : ''}{priceChangePercentage}%
                   </p>
-                  {/* パワーロー分位状態の表示 */}
+                  {/* パワーロー比 (修正) */}
                   {(() => {
                     const daysSinceGenesis = getDaysSinceGenesis();
                     const medianUSD = Math.pow(10, -17.01593313 + 5.84509376 * Math.log10(daysSinceGenesis));
-                    const supportUSD = Math.pow(10, -17.668) * Math.pow(daysSinceGenesis, 5.926);
 
-                    // ★★★★★ ここで価格をログ出力 ★★★★★
-                    console.log("現在価格 (USD):", chartData.latestPrice);
-                    console.log("中央値 (USD):", medianUSD);
-                    console.log("下限値 (USD):", supportUSD);
-
-                    const positionData = calculatePowerLawPosition(chartData.latestPrice, medianUSD, supportUSD);
-
-                    // ★★★★★ positionData もログ出力 ★★★★★
-                    console.log("positionData:", positionData);
-
-                    const positionLabel = getPowerLawPositionLabel(positionData);
-                    const positionColor = getPowerLawPositionColor(positionData);
-
-                    // ★★★★★ ここでも positionLabel をログ出力 ★★★★★
-                    console.log("positionLabel:", positionLabel)
-
-                    // ラベルに対応する説明文
-                    let positionDescription = '';
-                    if (positionLabel === '非常に割安') positionDescription = '過去の価格と比較して、非常に低い価格帯です。';
-                    else if (positionLabel === '割安') positionDescription = '過去の価格と比較して、低い価格帯です。';
-                    else if (positionLabel === 'やや割安') positionDescription = '中央値よりは低いですが、下限値よりは高い価格帯です。';
-                    else if (positionLabel === '適正範囲') positionDescription = '中央値と下限値、または中央値と上限値の間の価格帯です。';
-                    else if (positionLabel === '中央値付近') positionDescription = 'パワーローモデルの中央値に近い価格帯です。';
-                    else if (positionLabel === 'やや割高') positionDescription = '中央値よりは高いですが、上限値よりは低い価格帯です。';
-                    else if (positionLabel === '割高') positionDescription = '過去の価格と比較して、高い価格帯です。';
-                    else if (positionLabel === '非常に割高') positionDescription = '過去の価格と比較して、非常に高い価格帯です。';
-
+                    let powerLawRatio = null; // 初期値を null に
+                    if (chartData.latestPrice !== undefined && chartData.latestPrice !== null && medianUSD !== 0) {
+                      powerLawRatio = ((chartData.latestPrice / medianUSD) - 1) * 100;
+                    }
 
                     return (
-                      <div className="mt-2">
-                        <span className="text-xs text-gray-400">パワーロー分位:</span>
-                        <span className="ml-1 px-2 py-0.5 rounded text-xs font-bold" style={{ backgroundColor: positionColor, color: 'white' }}>
-                          {positionLabel}
-                        </span>
-                        <p className="text-xs text-gray-400 mt-1">{positionDescription}</p>
-                      </div>
+                      <p className={`text-lg font-semibold mt-2 ${powerLawRatio !== null && powerLawRatio > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        パワーロー比 {powerLawRatio !== null && typeof powerLawRatio === 'number'
+                          ? (powerLawRatio > 0 ? '+' : '') + powerLawRatio.toFixed(1) + '%'
+                          : '-'}
+                      </p>
                     )
                   })()}
                 </>
@@ -128,7 +89,7 @@ const Home = () => {
             <div className="bg-gray-700 p-4 rounded-lg hover:shadow-lg transition-shadow">
               <p className="text-gray-400 mb-2 flex items-center">
                 本日のパワーロー中央価格
-                <TooltipIcon content="パワーローモデルによる推定中央価格" />
+
               </p>
               {chartData.loading ? (
                 <div className="animate-pulse h-8 bg-gray-600 rounded w-1/2"></div>
@@ -143,7 +104,7 @@ const Home = () => {
             <div className="bg-gray-700 p-4 rounded-lg hover:shadow-lg transition-shadow">
               <p className="text-gray-400 mb-2 flex items-center">
                 本日のパワーロー下限価格
-                <TooltipIcon content="パワーローモデルによる推定下限価格（サポートライン）" />
+
               </p>
               <>
                 <p className="text-gray-200 text-2xl">{formatCurrency(Math.round(Math.pow(10, -17.668) * Math.pow(getDaysSinceGenesis(), 5.926) * exchangeRateData.exchangeRate), 'JPY')}</p>
