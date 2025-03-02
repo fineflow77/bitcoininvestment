@@ -18,26 +18,27 @@
   <title>ビットコイン長期投資ナビゲーター｜FIRE達成への道</title>
 
   <meta name="description" content="ビットコイン長期投資でFIREを目指す！パワーローモデルで1億円達成の可能性をシミュレーション。積立・取崩戦略をサポート。" />
-  {/* keywords, robots metaタグは現代のSEOではほぼ意味がないので削除 */}
 
-  <!-- Favicon -->
-  <link rel="icon" href="%PUBLIC_URL%/favicon.svg" />
-  <link rel="icon" href="%PUBLIC_URL%/favicon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo.svg" />
-  <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+  <!-- Favicon設定 - 複数形式をサポート -->
+  <link rel="icon" href="%PUBLIC_URL%/favicon.ico" /> <!-- 従来のICO形式（互換性確保） -->
+  <link rel="icon" href="%PUBLIC_URL%/favicon.svg" type="image/svg+xml" /> <!-- SVG形式（最新ブラウザ用） -->
+  <link rel="icon" href="%PUBLIC_URL%/favicon-32x32.png" sizes="32x32" type="image/png" /> <!-- PNG形式（中間互換性） -->
+  <link rel="icon" href="%PUBLIC_URL%/favicon-16x16.png" sizes="16x16" type="image/png" /> <!-- 小さいサイズ用 -->
+  <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" /> <!-- iOS用アイコン -->
+  <link rel="manifest" href="%PUBLIC_URL%/manifest.json" /> <!-- PWA用マニフェスト -->
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="ビットコイン長期投資シミュレーター｜1億円を目指す取り崩し & 積み立て戦略" />
   <meta property="og:description" content="ビットコイン長期投資の未来価値をパワーローで科学的に予測し、FIREを達成するための取り崩し・積み立て戦略を提供。" />
-  <meta property="og:image" content="%PUBLIC_URL%/og-image.jpg" /> {/* %PUBLIC_URL% を使用 */}
-  <meta property="og:url" content="https://www.btcplan.jp" /> {/* あなたのサイトのURLに置き換え */}
+  <meta property="og:image" content="%PUBLIC_URL%/og-image.jpg" />
+  <meta property="og:url" content="https://www.btcplan.jp" />
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="ビットコイン長期投資シミュレーター｜1億円を目指す取り崩し&積み立て戦略" />
   <meta name="twitter:description" content="ビットコインの未来価格をパワーローで科学的に予測し、FIREを達成するための取り崩し・積み立て戦略を提供。" />
-  <meta name="twitter:image" content="%PUBLIC_URL%/og-image.jpg" /> {/* %PUBLIC_URL% を使用 */}
+  <meta name="twitter:image" content="%PUBLIC_URL%/og-image.jpg" />
 
   <!-- プレビュー用のテーマカラー設定 -->
   <meta name="theme-color" content="#1A1E2D" />
@@ -132,9 +133,6 @@
   }
   </script>
 
-  {/* Tailwind CSS は本番環境ではCDNを使わない */}
-  {/*
-  <script src="https://cdn.tailwindcss.com"></script> */}
   <style>
     /* Recharts の不要な要素を非表示にする (応急処置) */
     #recharts_measurement_span {
