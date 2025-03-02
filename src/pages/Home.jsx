@@ -90,7 +90,7 @@ const Home = () => {
               alt="ビットコインパワーロー博士"
               className="h-10 w-10 mr-3"
             />
-            <h1 className="text-2xl font-bold text-gray-300">ビットコイン価格トラッカー</h1>
+            <h1 className="text-2xl font-bold text-gray-300">BTC価格トラッカー</h1>
           </div>
 
           <div className="flex items-center text-gray-400 text-sm mb-4">
