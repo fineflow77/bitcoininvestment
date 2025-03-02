@@ -1,25 +1,15 @@
 import React, { useState, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { ChevronDown, ChevronUp, Settings, HelpCircle } from "lucide-react";
-
-// ユーティリティ関数 (別ファイルに切り出すことも検討)
-const formatCurrency = (value) => {
-  if (value >= 100000000) return `${(value / 100000000).toFixed(2)}億円`;
-  if (value >= 10000) return `${(value / 10000).toFixed(0)}万円`;
-  return value.toLocaleString("ja-JP", { style: "currency", currency: "JPY" });
-};
-const formatBTC = (value) => {
-  if (value >= 1) return `${value.toFixed(2)} BTC`;
-  if (value >= 0.001) return `${value.toFixed(4)} BTC`;
-  return `${value.toFixed(6)} BTC`;
-};
-const formatPercent = (value) => (value === "-" ? "-" : `${parseFloat(value).toFixed(2)}%`);
+import { formatNumber, formatCurrency, formatBTC } from '../../utils/formatters'; // パスを修正
 
 // ツールチップアイコンコンポーネント (共通コンポーネントとして別ファイルに切り出すことも検討)
 const TooltipIcon = ({ content }) => (
   <div className="group relative inline-block ml-2">
     <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-300 cursor-help" />
-    <div className="invisible group-hover:visible absolute z-10 w-64 p-2 mt-2 text-sm text-gray-300 bg-gray-800 rounded-lg shadow-lg">{content}</div>
+    <div className="invisible group-hover:visible absolute z-10 w-64 p-2 mt-2 text-sm text-gray-300 bg-gray-800 rounded-lg shadow-lg -translate-x-1/2 left-1/2"> {/* ヘルプアイコンの位置修正 */}
+      <div>{content}</div> {/* pタグをdivタグに変更 */}
+    </div>
   </div>
 );
 
@@ -61,7 +51,6 @@ const btcPriceMedian = (days, model = "standard") => {
   return Math.pow(10, -17.01593313 + k * Math.log10(Math.max(days, 1))); // Math.max で days が 0 以下にならないように修正
 };
 const calculateDays = (year) => Math.max(Math.floor((new Date(year, 11, 31) - new Date("2009-01-03")) / (1000 * 60 * 60 * 24)), 1); // Math.max で days が 0 以下にならないように修正
-
 
 const InvestmentSimulator = () => {
   // State 変数
@@ -107,6 +96,7 @@ const InvestmentSimulator = () => {
   // シミュレーション実行関数
   const simulate = () => {
     if (!validateInputs()) return;
+
     try {
       const simulationResults = [];
       const exchangeRateNum = parseFloat(exchangeRate);
@@ -114,7 +104,7 @@ const InvestmentSimulator = () => {
       const monthlyInvestmentNum = parseFloat(monthlyInvestment);
       const yearsNum = parseInt(years);
       const startYear = CURRENT_YEAR;
-      const endYear = Math.max(TARGET_YEAR, startYear + yearsNum);
+      const endYear = Math.max(TARGET_YEAR, startYear + yearsNum); // 投資終了年と2050年を比較
       let basePriceUSD = null;
       let baseDays = null;
       let btcHeld = initialInvestmentType === "jpy" ? 0 : parseFloat(initialBtcHolding) || 0; // 初期BTC保有量設定
@@ -130,46 +120,63 @@ const InvestmentSimulator = () => {
         btcHeld = initialInvestmentValue / initialBtcPriceJPY; // 初期投資額から初期BTC保有量を計算
       }
 
-
-      let currentValueJPY = btcHeld * initialBtcPriceJPY;
+      let currentValueJPY = btcHeld * initialBtcPriceJPY; // 現在の日本円評価額
       let previousBtcHeld = btcHeld;
 
-
+      // 各年のデータを計算
       for (let year = startYear; year <= endYear; year++) {
-        const isInvestmentPeriod = year < startYear + yearsNum;
+        const isInvestmentPeriod = year < startYear + yearsNum; // 積み立て期間中かどうか
         const days = calculateDays(year);
-        const btcPriceUSD = btcPriceMedian(days, priceModel, basePriceUSD, baseDays, TRANSITION_START_YEAR); // 修正：価格予測モデル関数に basePriceUSD, baseDays, TRANSITION_START_YEAR を渡す
-        const effectiveExchangeRate = exchangeRateNum * Math.pow(1 + inflationRateNum, year - startYear);
-        const btcPriceJPY = btcPriceUSD * effectiveExchangeRate;
+
+        // BTC価格計算 (パワーローモデル)
+        let btcPriceUSD = btcPriceMedian(days, priceModel);
+        if (year >= TRANSITION_START_YEAR) {
+          // 2039年以降は減衰
+          if (!basePriceUSD) {
+            basePriceUSD = btcPriceMedian(calculateDays(TRANSITION_START_YEAR - 1), priceModel);
+            baseDays = calculateDays(TRANSITION_START_YEAR - 1);
+          }
+          const targetScale = priceModel === "standard" ? 0.41 : 0.5;
+          const decayRate = priceModel === "standard" ? 0.2 : 0.25;
+          const scale = targetScale + (1.0 - targetScale) * Math.exp(-decayRate * (year - (TRANSITION_START_YEAR - 1)));
+          btcPriceUSD = basePriceUSD * Math.pow(btcPriceMedian(days, priceModel) / btcPriceMedian(baseDays, priceModel), scale);
+        }
+
+        // 年間投資額、購入BTC量
         const annualInvestment = isInvestmentPeriod ? monthlyInvestmentNum * 12 : 0;
-        const btcPurchased = annualInvestment / btcPriceJPY;
+        const btcPurchased = annualInvestment / (btcPriceUSD * exchangeRateNum * (1 + inflationRateNum) ** (year - startYear));
+
+        // BTC保有量と評価額
         btcHeld += btcPurchased;
-        const addedBtc = btcHeld - previousBtcHeld;
-        previousBtcHeld = btcHeld;
-        currentValueJPY = btcHeld * btcPriceJPY;
+        currentValueJPY = btcHeld * btcPriceUSD * exchangeRateNum * Math.pow(1 + inflationRateNum, year - startYear);
 
-
+        // 結果を配列に追加
         simulationResults.push({
-          year, btcPrice: btcPriceJPY, annualInvestment, btcPurchased: addedBtc, btcHeld, totalValue: currentValueJPY, isInvestmentPeriod
+          year,
+          btcPrice: btcPriceUSD * exchangeRateNum * Math.pow(1 + inflationRateNum, year - startYear), // インフレ調整後の円価格
+          annualInvestment,
+          btcPurchased,
+          btcHeld,
+          totalValue: currentValueJPY,
+          isInvestmentPeriod,
         });
       }
       setResults(simulationResults);
-      setErrors({});
+      setErrors({}); // エラーがない場合はクリア
+
     } catch (err) {
       setErrors({ simulation: "シミュレーション中にエラーが発生しました: " + err.message });
     }
   };
-
 
   const chartData = useMemo(() => {
     return results.map(result => ({
       year: result.year,
       btcHeld: result.btcHeld,
       totalValue: result.totalValue,
-      isInvestmentPeriod: result.isInvestmentPeriod, // 投資期間フラグを渡す
+      isInvestmentPeriod: result.isInvestmentPeriod,
     }));
   }, [results]);
-
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-6">
@@ -221,10 +228,10 @@ const InvestmentSimulator = () => {
             {showAdvancedOptions && (
               <div className="mt-4 space-y-4 p-4 bg-gray-700 rounded-md">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <InputField label="為替レート (円/USD)">
+                  <InputField label="為替レート (円/USD)" tooltip={TOOLTIPS.exchangeRate} error={errors.exchangeRate}>
                     <input type="number" value={exchangeRate} onChange={(e) => setExchangeRate(e.target.value)} className="w-full bg-gray-600 p-2 rounded-md text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" step="0.1" placeholder="例: 150" />
                   </InputField>
-                  <InputField label="インフレ率 (%)">
+                  <InputField label="インフレ率 (%)" tooltip={TOOLTIPS.inflationRate} error={errors.inflationRate}>
                     <input type="number" value={inflationRate} onChange={(e) => setInflationRate(e.target.value)} className="w-full bg-gray-600 p-2 rounded-md text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" step="0.1" placeholder="例: 0" />
                   </InputField>
                 </div>
@@ -290,21 +297,6 @@ const InvestmentSimulator = () => {
           </div>
         )}
       </div>
-      {/* フッター追加 */}
-      <footer className="text-center text-gray-400 mt-8 py-4 border-t border-gray-800">
-        <p>
-          © {new Date().getFullYear()} BTCパワーロー博士{' '}
-          <a
-            href="https://x.com/lovewaves711"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            @lovewaves711
-          </a>
-          . All rights reserved.
-        </p>
-      </footer>
     </div>
   );
 };

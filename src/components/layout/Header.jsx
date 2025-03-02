@@ -1,3 +1,4 @@
+// src/components/layout/Header.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
 
@@ -7,7 +8,7 @@ const Header = () => {
       <nav className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           <Link to="/" className="text-xl font-bold text-white">
-            ビットコイン長期投資シミュレーター
+            ビットコイン長期投資ナビゲーター
           </Link>
           <div className="flex space-x-4">
             <Link to="/simulator" className="text-gray-300 hover:text-white">

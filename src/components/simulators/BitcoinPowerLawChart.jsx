@@ -1,10 +1,10 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-    Brush, ReferenceArea, Label
+    Brush, ReferenceArea, Label, ReferenceLine, Text
 } from 'recharts';
-import { HelpCircle, RefreshCw, Download, Calendar } from 'lucide-react';
-import useBitcoinChartData from '../../hooks/useBitcoinChartData';
+import { Calendar } from 'lucide-react'; // 使っているアイコンだけに絞る
+import { useBitcoinChartData } from '../../hooks/useBitcoinChartData';
 import { fromLog10 } from '../../utils/mathUtils';
 import { toJapaneseDate, toShortJapaneseDate } from '../../utils/dateUtils';
 import { formatCurrency } from '../../utils/formatters';
@@ -20,6 +20,13 @@ const COLORS = {
     halving: 'rgba(255, 255, 255, 0.1)' // 半減期エリアの色 (半透明の白)
 };
 
+// レンダリング定数
+const CHART_CONFIG = {
+    ANIMATION_DURATION: 0,    // アニメーション時間
+    PRICE_LINE_WIDTH: 0.7,    // 実際価格の線の太さ (px)
+    MODEL_LINE_WIDTH: 1.5,    // モデル線の太さ (px)
+};
+
 // ビットコインの半減期イベント
 const BITCOIN_EVENTS = [
     { date: '2012-11-28', label: '第1回', description: '報酬が25BTCに半減' },
@@ -28,20 +35,15 @@ const BITCOIN_EVENTS = [
     { date: '2024-04-20', label: '第4回', description: '報酬が3.125BTCに半減' },
 ];
 
-// ツールチップアイコンコンポーネント(Home.jsxで定義されているのでここでは定義しない)
-// const TooltipIcon = ({ content }) => ( ... );
-
 // 日付範囲セレクターコンポーネント
-const DateRangeSelector = ({ selectedRange, onRangeChange }) => (
-    <div className="flex items-center">
+const DateRangeSelector = React.memo(({ selectedRange, onRangeChange }) => (
+    <div className="flex items-center w-full">
         <Calendar className="h-4 w-4 mr-2 text-gray-300" />
-        <div className="flex bg-gray-800 rounded-md overflow-hidden">
+        <div className="flex flex-wrap sm:flex-nowrap bg-gray-800 rounded-md overflow-hidden w-full">
             {['all', '10y', '5y', '2y', '1y', '6m'].map(range => (
                 <button
                     key={range}
-                    className={`px-3 py-1 text-sm transition-colors ${selectedRange === range
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-transparent text-gray-300 hover:bg-gray-700'}`}
+                    className={`px-2 sm:px-3 py-1 text-xs sm:text-sm transition-colors flex-1 ${selectedRange === range ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-300 hover:bg-gray-700'}`}
                     onClick={() => onRangeChange(range)}
                 >
                     {range === 'all' ? '全期間' :
@@ -54,10 +56,10 @@ const DateRangeSelector = ({ selectedRange, onRangeChange }) => (
             ))}
         </div>
     </div>
-);
+));
 
 // カスタム凡例コンポーネント
-const CustomLegend = ({ payload }) => {
+const CustomLegend = React.memo(({ payload }) => {
     if (!payload || !payload.length) {
         return null; // 凡例データがない場合は何も表示しない
     }
@@ -68,17 +70,33 @@ const CustomLegend = ({ payload }) => {
         supportModel: '下限価格',
     };
 
+    // payload を順番通りに並べ替え
+    const orderedPayload = ['price', 'medianModel', 'supportModel']
+        .map(key => payload.find(item => item.dataKey === key))
+        .filter(Boolean); // undefined を除去
+
     return (
-        <div className="flex gap-6 justify-end flex-wrap">
-            {payload.map((entry, index) => (
-                <div key={index} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
-                    <span className="text-gray-200 text-sm">{labelMap[entry.dataKey] || entry.dataKey}</span>
+        <div className="flex gap-2 sm:gap-6 justify-end flex-wrap">
+            {orderedPayload.map((entry, index) => (
+                <div key={index} className="flex items-center gap-1 sm:gap-2">
+                    <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full" style={{ backgroundColor: entry.color }} />
+                    <span className="text-gray-200 text-xs sm:text-sm">{labelMap[entry.dataKey] || entry.dataKey}</span>
                 </div>
             ))}
         </div>
     );
-};
+});
+
+// カスタム決定係数コンポーネント
+const RSquaredDisplay = React.memo(({ rSquared }) => {
+    if (rSquared === null || rSquared === undefined) return null;
+
+    return (
+        <div className="absolute bottom-4 right-4 bg-gray-800 bg-opacity-75 px-2 py-1 rounded text-gray-300 text-xs">
+            決定係数 (R²): {rSquared.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
+        </div>
+    );
+});
 
 // メインコンポーネント (BitcoinPowerLawChart)
 const BitcoinPowerLawChart = React.memo(({ exchangeRate = 150 }) => {
@@ -87,14 +105,12 @@ const BitcoinPowerLawChart = React.memo(({ exchangeRate = 150 }) => {
     const [selectedRange, setSelectedRange] = useState('all');
     const [displayedDateRange, setDisplayedDateRange] = useState({ startIndex: 0, endIndex: 0 });
 
-    // データ更新関数, 使わないので削除
-
-    // 期間変更ハンドラー
+    // 期間変更ハンドラー - 依存関係のない安定したコールバック
     const handleRangeChange = useCallback((range) => {
         setSelectedRange(range);
-    }, []);
+    }, []); // 空の依存配列 - コンポーネントの再レンダリング時に再作成されない
 
-    // 表示範囲計算関数 (変更なし)
+    // 表示範囲計算関数 - メモ化して安定した参照を保持
     const calculateDateRange = useCallback((data, range) => {
         if (!data || data.length === 0) return { startIndex: 0, endIndex: 0 };
 
@@ -130,7 +146,7 @@ const BitcoinPowerLawChart = React.memo(({ exchangeRate = 150 }) => {
         }
 
         return { startIndex, endIndex };
-    }, []);
+    }, []); // 空の依存配列
 
     // 表示範囲が変更されたときに、表示データを更新
     useEffect(() => {
@@ -148,7 +164,7 @@ const BitcoinPowerLawChart = React.memo(({ exchangeRate = 150 }) => {
         );
     }, [chartData.data, displayedDateRange]);
 
-    // 半減期エリアの計算 (変更なし)
+    // 半減期エリアの計算 - メモ化して不要な再計算を防止
     const halvingReferenceAreas = useMemo(() => {
         if (!displayedData || displayedData.length === 0) return [];
 
@@ -177,9 +193,6 @@ const BitcoinPowerLawChart = React.memo(({ exchangeRate = 150 }) => {
             .filter(Boolean);
     }, [displayedData]);
 
-
-    // CSVダウンロード関数, 使わないので削除
-
     // ローディング中の表示
     if (chartData.loading) {
         return (
@@ -205,10 +218,9 @@ const BitcoinPowerLawChart = React.memo(({ exchangeRate = 150 }) => {
 
     // チャートのレンダリング
     return (
-        <div className="bg-gray-900 rounded-lg p-4 shadow-lg text-gray-100">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
-                {/* 削除 */}
-                <div className="flex flex-col sm:flex-row gap-3">
+        <div className="bg-gray-900 rounded-lg p-2 sm:p-4 shadow-lg text-gray-100">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 sm:mb-4 gap-2 sm:gap-3">
+                <div className="w-full flex flex-col sm:flex-row gap-2 sm:gap-3">
                     {/* 日付範囲セレクター */}
                     <DateRangeSelector
                         selectedRange={selectedRange}
@@ -220,14 +232,26 @@ const BitcoinPowerLawChart = React.memo(({ exchangeRate = 150 }) => {
             {/* チャート本体 */}
             {!chartData.loading && chartData.data && chartData.data.length > 0 && (
                 <>
-                    <div className="mb-4 text-xs text-gray-400 text-right">
+                    <div className="mb-2 sm:mb-4 text-xs text-gray-400 text-right">
                         <span>最終更新: {chartData.lastUpdated}</span>
                     </div>
-                    <div className="bg-gray-900 rounded-lg p-2">
+                    <div className="bg-gray-900 rounded-lg p-0 sm:p-2 relative">
+                        {/* 決定係数を表示 - 左の目盛りの上に配置 */}
+                        <div className="absolute top-2 left-2 bg-gray-800 bg-opacity-75 px-2 py-1 rounded text-gray-300 text-xs z-10">
+                            決定係数 (R²): {chartData.rSquared !== null && chartData.rSquared !== undefined ?
+                                chartData.rSquared.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 }) : '-'}
+                        </div>
+
                         <ResponsiveContainer width="100%" height={550}>
                             <LineChart
                                 data={displayedData}
-                                margin={{ top: 20, right: 40, left: 20, bottom: 20 }}
+                                margin={{
+                                    top: 20,
+                                    right: 20,
+                                    left: 0, // 左マージンを削減して横幅いっぱいに表示 
+                                    bottom: 20
+                                }}
+                                animationDuration={CHART_CONFIG.ANIMATION_DURATION}
                             >
                                 {/* グリッド */}
                                 <CartesianGrid stroke={COLORS.grid} strokeDasharray="3 3" />
@@ -259,16 +283,29 @@ const BitcoinPowerLawChart = React.memo(({ exchangeRate = 150 }) => {
                                     axisLine={false}
                                     tickFormatter={(date) => {
                                         const totalDays = displayedData.length;
-                                        // 表示期間に応じて日付フォーマットを調整
-                                        if (totalDays > 365 * 4) {
-                                            return new Date(date).getFullYear().toString();
-                                        } else if (totalDays > 365) {
-                                            return toShortJapaneseDate(date);
+                                        const isMobile = window.innerWidth < 640; // スマホビューかどうか
+
+                                        // 表示期間とデバイスに応じて日付フォーマットを調整
+                                        if (isMobile) {
+                                            // モバイル表示ではより簡略化
+                                            if (totalDays > 365 * 2) {
+                                                return new Date(date).getFullYear().toString().slice(2); // 末尾2桁の年だけを表示
+                                            } else {
+                                                return toShortJapaneseDate(date).replace(/月/g, '/').replace(/日/g, '');
+                                            }
+                                        } else {
+                                            // PC表示では通常フォーマット
+                                            if (totalDays > 365 * 4) {
+                                                return new Date(date).getFullYear().toString();
+                                            } else if (totalDays > 365) {
+                                                return toShortJapaneseDate(date);
+                                            }
+                                            return toJapaneseDate(date);
                                         }
-                                        return toJapaneseDate(date);
                                     }}
-                                    tick={{ fontSize: 11 }}
-                                    minTickGap={30}
+                                    tick={{ fontSize: 10 }}
+                                    minTickGap={20} // モバイル用に間隔を少し狭く
+                                    height={30} // 高さを固定して一貫したスペースを確保
                                 />
 
                                 {/* Y軸 (価格) */}
@@ -283,24 +320,28 @@ const BitcoinPowerLawChart = React.memo(({ exchangeRate = 150 }) => {
                                         return formatCurrency(value, 'USD').replace(/[\$,]/g, '');
                                     }}
                                     tick={{ fontSize: 11 }}
+                                    width={45} // 固定幅を設定して一貫したスペースを確保
                                 />
 
                                 {/* ツールチップ */}
                                 <Tooltip
                                     content={<ChartTooltip exchangeRate={exchangeRate} />}
-                                    cursor={false} // カーソル非表示
+                                    cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1 }}
                                 />
 
+                                {/* 他のライン（中央価格、下限価格）を先に描画 */}
                                 {/* 中央価格ライン */}
                                 <Line
                                     yAxisId="left"
                                     type="monotone"
                                     dataKey="medianModel"
                                     stroke={COLORS.median}
-                                    strokeWidth={2}
+                                    strokeWidth={CHART_CONFIG.MODEL_LINE_WIDTH}
                                     dot={false}
                                     name="中央価格"
                                     strokeDasharray="5 5"
+                                    isAnimationActive={false}
+                                    animationDuration={CHART_CONFIG.ANIMATION_DURATION}
                                 />
 
                                 {/* 下限価格ライン */}
@@ -309,22 +350,31 @@ const BitcoinPowerLawChart = React.memo(({ exchangeRate = 150 }) => {
                                     type="monotone"
                                     dataKey="supportModel"
                                     stroke={COLORS.support}
-                                    strokeWidth={2}
+                                    strokeWidth={CHART_CONFIG.MODEL_LINE_WIDTH}
                                     dot={false}
                                     name="下限価格"
+                                    isAnimationActive={false}
+                                    animationDuration={CHART_CONFIG.ANIMATION_DURATION}
                                 />
 
-                                {/* 実際価格ライン */}
+                                {/* 実際価格ライン - 特殊なレンダリング設定 */}
                                 <Line
                                     yAxisId="left"
-                                    type="monotone"
+                                    type="linear" // monotoneからlinearへ変更
                                     dataKey="price"
                                     stroke={COLORS.price}
-                                    strokeWidth={2}
-                                    dot={{ stroke: COLORS.price, strokeWidth: 1, r: 1, fill: COLORS.price }}
-                                    activeDot={{ r: 6 }}
+                                    strokeWidth={CHART_CONFIG.PRICE_LINE_WIDTH} // 線の太さをさらに細く
+                                    dot={false} // ドットを完全に無効化
+                                    activeDot={{ r: 4, strokeWidth: 1 }} // アクティブドットの設定を細かく調整
                                     name="実際価格"
-                                    connectNulls={false}
+                                    connectNulls={true} // 欠損値があってもラインをつなぐ
+                                    isAnimationActive={false} // アニメーションを無効化
+                                    animationDuration={CHART_CONFIG.ANIMATION_DURATION}
+                                    style={{
+                                        strokeLinecap: 'butt',
+                                        strokeLinejoin: 'miter',
+                                        vectorEffect: 'non-scaling-stroke' // 重要: SVGの拡大縮小時に線の太さを一定に保つ
+                                    }}
                                 />
 
                                 {/* ブラシ (範囲選択) */}
@@ -338,7 +388,15 @@ const BitcoinPowerLawChart = React.memo(({ exchangeRate = 150 }) => {
                                 >
                                     <LineChart>
                                         {/* ブラシ内のミニチャート (実際価格) */}
-                                        <Line dataKey="price" stroke={COLORS.price} dot={false} strokeWidth={1} />
+                                        <Line
+                                            dataKey="price"
+                                            stroke={COLORS.price}
+                                            dot={false}
+                                            strokeWidth={CHART_CONFIG.PRICE_LINE_WIDTH}
+                                            isAnimationActive={false}
+                                            animationDuration={CHART_CONFIG.ANIMATION_DURATION}
+                                            style={{ vectorEffect: 'non-scaling-stroke' }}
+                                        />
                                     </LineChart>
                                 </Brush>
 
@@ -347,25 +405,28 @@ const BitcoinPowerLawChart = React.memo(({ exchangeRate = 150 }) => {
                                     content={<CustomLegend />}
                                     verticalAlign="top"
                                     align="right"
-                                    wrapperStyle={{ top: 0, right: 10 }}
+                                    wrapperStyle={{ top: 5, right: 10 }}
                                 />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
 
                     {/* 説明文 */}
-                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-400">
+                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm sm:text-base text-gray-400">
                         <div className="bg-gray-800 rounded-md p-3">
                             <h4 className="font-semibold mb-1 text-gray-300">パワーローモデルについて</h4>
-                            <p>ビットコインの価格成長は時間の累乗関数（パワーロー）に従う傾向があります。中央値モデルはビットコイン価格が最も滞在しやすい中心的な価格帯を表し、下限値モデルは過去のビットコイン価格が歴史的に下回ったことがない最低水準を示します。</p>
+                            <p className="text-sm sm:text-base">ビットコインの価格成長は時間の累乗関数（パワーロー）に従う傾向があります。中央価格はビットコイン価格が最も滞在しやすい中心的な価格帯を表し、下限価格は過去のビットコイン価格が歴史的に下回ったことがない最低水準を示します。</p>
+                            <p className="mt-2">
+                                <a href="/powerlaw" className="text-blue-400 hover:text-blue-300 transition-colors underline">
+                                    パワーローモデルの詳細ページ
+                                </a>
+                            </p>
                         </div>
 
                         <div className="bg-gray-800 rounded-md p-3">
                             <h4 className="font-semibold mb-1 text-gray-300">注意事項</h4>
-                            <p>このモデルは価格予測や投資アドバイスではありません。歴史的なトレンドの視覚化のみを目的としています。</p>
+                            <p className="text-sm sm:text-base">このモデルは価格予測や投資アドバイスではありません。歴史的なトレンドの視覚化のみを目的としています。</p>
                         </div>
-                        {/* 決定係数 (R^2) の表示 */}
-
                     </div>
                 </>
             )}

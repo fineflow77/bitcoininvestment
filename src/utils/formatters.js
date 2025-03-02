@@ -1,10 +1,6 @@
 // src/utils/formatters.js
-/**
- * 通貨フォーマット (USDとJPYに対応)
- * @param {number} value - 数値
- * @param {string} [currency='JPY'] - 通貨 ('USD' または 'JPY')。デフォルトは 'JPY'
- * @returns {string} フォーマットされた通貨文字列
- */
+
+// 通貨フォーマット (USDとJPYに対応)
 export const formatCurrency = (value, currency = 'JPY') => {
     if (!value) return currency === 'USD' ? '$0' : '0円';
 
@@ -53,3 +49,20 @@ export const formatBTC = (value) => parseFloat(value).toFixed(4);
  * @returns {string}
  */
 export const formatYear = (year) => `${year}年`;
+
+//数値のフォーマット
+export const formatNumber = (value, options = {}) => {
+    if (value === null || value === undefined || isNaN(value)) {
+        return '-'; // または適切なデフォルト値
+    }
+    if (typeof value !== 'number') {
+        return value; // 数値でない場合はそのまま返す
+    }
+    const formatter = new Intl.NumberFormat('ja-JP', {
+        style: 'decimal', // 通貨形式ではなく、数値形式
+        minimumFractionDigits: options.minimumFractionDigits || 0, // 最小小数点以下の桁数
+        maximumFractionDigits: options.maximumFractionDigits || 2, // 最大小数点以下の桁数
+        ...options, // その他のオプション (currency など)
+    });
+    return formatter.format(value);
+};
