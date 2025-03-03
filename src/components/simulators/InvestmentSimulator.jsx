@@ -1,19 +1,21 @@
 import React, { useState, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { ChevronDown, ChevronUp, Settings, HelpCircle } from "lucide-react";
-import { formatNumber, formatCurrency, formatBTC } from '../../utils/formatters'; // パスを修正
+import { formatCurrency, formatBTC } from '../../utils/formatters';
+import { DEFAULTS, START_YEAR, TRANSITION_START_YEAR, TARGET_YEAR, CURRENT_YEAR } from '../../utils/constants'; // 追記
+import { btcPriceMedian, calculateDays } from '../../utils/models';  //追記
 
-// ツールチップアイコンコンポーネント (共通コンポーネントとして別ファイルに切り出すことも検討)
+// ツールチップアイコンコンポーネント
 const TooltipIcon = ({ content }) => (
   <div className="group relative inline-block ml-2">
     <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-300 cursor-help" />
-    <div className="invisible group-hover:visible absolute z-10 w-64 p-2 mt-2 text-sm text-gray-300 bg-gray-800 rounded-lg shadow-lg -translate-x-1/2 left-1/2"> {/* ヘルプアイコンの位置修正 */}
-      <div>{content}</div> {/* pタグをdivタグに変更 */}
+    <div className="invisible group-hover:visible absolute z-10 w-64 p-2 mt-2 text-sm text-gray-300 bg-gray-800 rounded-lg shadow-lg -translate-x-1/2 left-1/2">
+      {content}
     </div>
   </div>
 );
 
-// インプットフィールドコンポーネント (共通コンポーネントとして別ファイルに切り出すことも検討)
+// インプットフィールドコンポーネント
 const InputField = ({ label, tooltip, error, children }) => (
   <div className="mb-4">
     <div className="flex items-center mb-1">
@@ -25,13 +27,7 @@ const InputField = ({ label, tooltip, error, children }) => (
   </div>
 );
 
-// 定数 (constants.js など別ファイルに切り出すことも検討)
-const DEFAULTS = { EXCHANGE_RATE: 150, INFLATION_RATE: 0 };
-const START_YEAR = 2009;
-const TRANSITION_START_YEAR = 2039;
-const TARGET_YEAR = 2050;
-const CURRENT_YEAR = new Date().getFullYear();
-const TOOLTIPS = {
+const TOOLTIPS = { //このオブジェクトはコンポーネントの外に
   initialInvestmentType: "初期投資方法を選択してください。すでに保有しているBTCを指定するか、日本円で投資するかを選べます。",
   initialInvestment: "初期投資額（円）を入力してください。",
   initialBtcHolding: "すでに保有しているビットコインの量（BTC）を入力してください。",
@@ -44,13 +40,6 @@ const TOOLTIPS = {
   exchangeRate: "円ドルの為替レートを設定します。",
   inflationRate: "年間の物価上昇率を設定します。",
 };
-
-// 価格予測モデル関数 (models.js など別ファイルに切り出すことも検討)
-const btcPriceMedian = (days, model = "standard") => {
-  const k = model === "standard" ? 5.84509376 : 5.75;
-  return Math.pow(10, -17.01593313 + k * Math.log10(Math.max(days, 1))); // Math.max で days が 0 以下にならないように修正
-};
-const calculateDays = (year) => Math.max(Math.floor((new Date(year, 11, 31) - new Date("2009-01-03")) / (1000 * 60 * 60 * 24)), 1); // Math.max で days が 0 以下にならないように修正
 
 const InvestmentSimulator = () => {
   // State 変数
@@ -121,7 +110,7 @@ const InvestmentSimulator = () => {
       }
 
       let currentValueJPY = btcHeld * initialBtcPriceJPY; // 現在の日本円評価額
-      let previousBtcHeld = btcHeld;
+      // let previousBtcHeld = btcHeld; //この変数は不要
 
       // 各年のデータを計算
       for (let year = startYear; year <= endYear; year++) {
@@ -174,7 +163,7 @@ const InvestmentSimulator = () => {
       year: result.year,
       btcHeld: result.btcHeld,
       totalValue: result.totalValue,
-      isInvestmentPeriod: result.isInvestmentPeriod,
+      isInvestmentPeriod: result.isInvestmentPeriod, //積み立て期間中かどうかの情報
     }));
   }, [results]);
 
@@ -259,7 +248,7 @@ const InvestmentSimulator = () => {
                   <Tooltip
                     contentStyle={{ backgroundColor: '#1F2937', border: 'none' }}
                     labelStyle={{ color: '#9CA3AF' }}
-                    formatter={(value, name) => name === "btcHeld" ? [formatBTC(value), name] : [formatCurrency(value), name]} />
+                    formatter={(value, name) => name === "btcHeld" ? [formatBTC(value), "BTC保有量"] : [formatCurrency(value), "資産評価額"]} />
                   <Legend verticalAlign="top" height={36} />
                   <Line yAxisId="left" type="monotone" dataKey="btcHeld" name="BTC保有量" stroke="#34D399" dot={false} />
                   <Line yAxisId="right" type="monotone" dataKey="totalValue" name="資産評価額" stroke="#60A5FA" dot={false} />
@@ -273,8 +262,8 @@ const InvestmentSimulator = () => {
                 <thead className="sticky top-0 bg-gray-700 z-10">
                   <tr className="text-left border-b border-gray-600">
                     <th className="p-2 whitespace-nowrap text-gray-300">年</th>
-                    <th className="p-2 whitespace-nowrap text-gray-300">1BTC価格</th>
-                    <th className="p-2 whitespace-nowrap text-gray-300">年間投資額</th>
+                    <th className="p-2 whitespace-nowrap text-gray-300">BTC価格</th>
+                    <th className="p-2 whitespace-nowrap text-gray-300">年間積み立て額</th>
                     <th className="p-2 whitespace-nowrap text-gray-300">追加BTC量</th>
                     <th className="p-2 whitespace-nowrap text-gray-300">BTC保有量</th>
                     <th className="p-2 whitespace-nowrap text-gray-300">資産評価額</th>
@@ -284,11 +273,11 @@ const InvestmentSimulator = () => {
                   {results.map((result, index) => (
                     <tr key={index} className={index % 2 === 0 ? "bg-gray-800" : "bg-gray-700"}>
                       <td className="p-2 whitespace-nowrap text-gray-100">{result.year}</td>
-                      <td className="p-2 whitespace-nowrap text-gray-100">{formatCurrency(result.btcPrice)}</td>
-                      <td className="p-2 whitespace-nowrap text-gray-100">{formatCurrency(result.annualInvestment)}</td>
+                      <td className="p-2 whitespace-nowrap text-gray-100">{formatCurrency(result.btcPrice, 'JPY')}</td>
+                      <td className="p-2 whitespace-nowrap text-gray-100">{formatCurrency(result.annualInvestment, 'JPY')}</td>
                       <td className="p-2 whitespace-nowrap text-gray-100">{formatBTC(result.btcPurchased)}</td>
                       <td className="p-2 whitespace-nowrap text-gray-100">{formatBTC(result.btcHeld)}</td>
-                      <td className="p-2 whitespace-nowrap text-gray-100">{formatCurrency(result.totalValue)}</td>
+                      <td className="p-2 whitespace-nowrap text-gray-100">{formatCurrency(result.totalValue, 'JPY')}</td>
                     </tr>
                   ))}
                 </tbody>

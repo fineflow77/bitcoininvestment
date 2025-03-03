@@ -1,8 +1,8 @@
 import { differenceInDays, format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 
-// ビットコイン創設日（UTC）
-export const BITCOIN_GENESIS_DATE = new Date('2009-01-03T00:00:00Z');
+// ビットコイン創設日
+export const BITCOIN_GENESIS_DATE = new Date(2009, 0, 3);
 
 /**
  * 創設からの日数を計算

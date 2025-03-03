@@ -1,68 +1,98 @@
-// src/utils/formatters.js
+/**
+ * 金額をフォーマットする
+ * @param {number} value - フォーマットする金額
+ * @param {string} currency - 通貨コード ('USD', 'JPY')
+ * @returns {string} フォーマットされた金額
+ */
+export const formatCurrency = (value, currency = 'USD') => {
+    // null, undefined, NaN チェックを強化
+    if (value === null || value === undefined || isNaN(value)) {
+        return '-';
+    }
 
-// 通貨フォーマット (USDとJPYに対応)
-export const formatCurrency = (value, currency = 'JPY') => {
-    if (!value) return currency === 'USD' ? '$0' : '0円';
+    // 値を数値型に変換（文字列が渡された場合に対応）
+    const numericValue = Number(value);
 
-    const symbol = currency === 'USD' ? '$' : '¥';
+    // 数値変換後も念のためチェック
+    if (isNaN(numericValue)) {
+        return '-';
+    }
 
-    if (currency === 'JPY') {
-        if (value >= 1e8) return `${(value / 1e8).toFixed(2)}億円`;
-        if (value >= 1e4) {
-            const manValue = Math.floor(value / 1e4);
-            // 1000万円以上は整数で表示（例：1234万円, 元のコードに合わせた）
-            if (manValue >= 1000) {
-                return `¥${Math.floor(manValue)}万円`;
-            }
-            return `¥${manValue}万円`;
-        }
-        return `¥${Math.floor(value)}円`;
-    } else { // currency === 'USD'
-        if (value < 0.01) return `${symbol}${value.toFixed(6)}`;
-        if (value < 1) return `${symbol}${value.toFixed(4)}`;
-        if (value < 10) return `${symbol}${value.toFixed(2)}`;
-        if (value < 1000) return `${symbol}${Math.round(value)}`;
-        if (value < 10000) return `${symbol}${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-        if (value < 1000000) return `${symbol}${(value / 1000).toFixed(1)}k`;
-        if (value < 1000000000) return `${symbol}${(value / 1000000).toFixed(1)}M`;
-        return `${symbol}${(value / 1000000000).toFixed(1)}B`;
+    const options = {
+        style: 'currency',
+        currency: currency,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    };
+
+    // 1000未満の場合、小数点以下を表示
+    if (Math.abs(numericValue) < 1000) {
+        options.minimumFractionDigits = 2;
+        options.maximumFractionDigits = 2;
+    }
+
+    // 100未満の場合、さらに多くの小数点以下を表示
+    if (Math.abs(numericValue) < 100) {
+        options.minimumFractionDigits = 2;
+        options.maximumFractionDigits = 4;
+    }
+
+    // 1未満の場合、最大4桁の小数点以下を表示
+    if (Math.abs(numericValue) < 1) {
+        options.minimumFractionDigits = 2;
+        options.maximumFractionDigits = 4;
+    }
+
+    try {
+        return new Intl.NumberFormat('ja-JP', options).format(numericValue);
+    } catch (error) {
+        console.error('Error formatting currency value:', numericValue, error);
+        return '-';
     }
 };
 
 /**
- * パーセント表示
- * @param {number} value
- * @returns {string}
+ * ビットコイン数量をフォーマットする
+ * @param {number} value - フォーマットするBTC数量
+ * @param {number} maxDecimals - 最大小数点以下桁数（デフォルト: 8）
+ * @returns {string} フォーマットされたBTC数量
  */
-export const formatPercent = (value) => `${parseFloat(value).toFixed(2)}%`;
-
-/**
- * BTC数量フォーマット
- * @param {number} value
- * @returns {string}
- */
-export const formatBTC = (value) => parseFloat(value).toFixed(4);
-
-/**
- * 年フォーマット
- * @param {number} year
- * @returns {string}
- */
-export const formatYear = (year) => `${year}年`;
-
-//数値のフォーマット
-export const formatNumber = (value, options = {}) => {
+export const formatBTC = (value, maxDecimals = 8) => {
+    // null, undefined, NaN チェック
     if (value === null || value === undefined || isNaN(value)) {
-        return '-'; // または適切なデフォルト値
+        return '-';
     }
-    if (typeof value !== 'number') {
-        return value; // 数値でない場合はそのまま返す
+
+    // 値を数値型に変換
+    const numericValue = Number(value);
+
+    // 数値変換後も念のためチェック
+    if (isNaN(numericValue)) {
+        return '-';
     }
-    const formatter = new Intl.NumberFormat('ja-JP', {
-        style: 'decimal', // 通貨形式ではなく、数値形式
-        minimumFractionDigits: options.minimumFractionDigits || 0, // 最小小数点以下の桁数
-        maximumFractionDigits: options.maximumFractionDigits || 2, // 最大小数点以下の桁数
-        ...options, // その他のオプション (currency など)
-    });
-    return formatter.format(value);
+
+    try {
+        // 値の大きさに応じて小数点以下の桁数を調整
+        let decimals = maxDecimals;
+
+        if (Math.abs(numericValue) >= 100) {
+            decimals = Math.min(1, maxDecimals); // 100 BTC以上は小数点以下1桁まで
+        } else if (Math.abs(numericValue) >= 10) {
+            decimals = Math.min(2, maxDecimals); // 10 BTC以上は小数点以下2桁まで
+        } else if (Math.abs(numericValue) >= 1) {
+            decimals = Math.min(4, maxDecimals); // 1 BTC以上は小数点以下4桁まで
+        }
+
+        // 数値を文字列にフォーマット
+        const formattedValue = numericValue.toLocaleString('ja-JP', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: decimals
+        });
+
+        // 単位を追加
+        return `${formattedValue} BTC`;
+    } catch (error) {
+        console.error('Error formatting BTC value:', numericValue, error);
+        return '-';
+    }
 };

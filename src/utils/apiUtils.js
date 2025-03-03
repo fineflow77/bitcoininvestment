@@ -1,25 +1,21 @@
-// src/utils/apiUtils.js
-
-/**
- * タイムアウト機能付きのフェッチ関数
- * @param {string} url - フェッチするURL
- * @param {Object} options - フェッチオプション
- * @param {number} timeout - タイムアウト時間（ミリ秒）
- * @returns {Promise<Response>} - フェッチレスポンス
- */
-export const fetchWithTimeout = async (url, options = {}, timeout = 10000) => {
+export const apiRequest = async (method, url, params = {}, headers = {}, timeout = 10000) => {
+    const queryString = new URLSearchParams(params).toString();
+    const fullUrl = `${url}?${queryString}`;
     const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeout);
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
-        const response = await fetch(url, {
-            ...options,
-            signal: controller.signal
+        const response = await fetch(fullUrl, {
+            method,
+            headers: { 'Accept': 'application/json', ...headers },
+            signal: controller.signal,
         });
-        clearTimeout(id);
-        return response;
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return await response.json();
     } catch (error) {
-        clearTimeout(id);
+        if (error.name === 'AbortError') throw new Error('API request timed out');
         throw error;
+    } finally {
+        clearTimeout(timeoutId);
     }
 };

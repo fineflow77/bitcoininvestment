@@ -1,10 +1,10 @@
-import React, { useState, useMemo, useEffect } from "react"; // useMemo をインポート
+import React, { useState, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { ChevronDown, ChevronUp, Settings, HelpCircle } from "lucide-react";
-import { formatNumber, formatCurrency, formatBTC } from '../../utils/formatters';
+import { formatCurrency, formatBTC } from '../../utils/formatters';
 
 
-// ツールチップアイコンコンポーネント (共通コンポーネントとして別ファイルに切り出すことも検討)
+// ツールチップアイコンコンポーネント
 const TooltipIcon = ({ content }) => (
     <div className="group relative inline-block ml-2">
         <HelpCircle className="h-4 w-4 text-gray-300 hover:text-white cursor-help" />
@@ -14,7 +14,7 @@ const TooltipIcon = ({ content }) => (
     </div>
 );
 
-// インプットフィールドコンポーネント (共通コンポーネントとして別ファイルに切り出すことも検討)
+// インプットフィールドコンポーネント
 const InputField = ({ label, tooltip, error, children }) => (
     <div className="mb-4">
         <div className="flex items-center mb-1">
@@ -26,7 +26,7 @@ const InputField = ({ label, tooltip, error, children }) => (
     </div>
 );
 
-// 定数 (constants.js など別ファイルに切り出すことも検討)
+// 定数
 const DEFAULTS = {
     TAX_RATE: 20.315,
     EXCHANGE_RATE: 150,
@@ -52,7 +52,7 @@ const TOOLTIPS = {
     </React.Fragment>,
 };
 
-// 価格予測モデル関数 (models.js など別ファイルに切り出すことも検討)
+// 価格予測モデル関数
 const btcPriceMedian = (days, model = "standard") => {
     if (days <= 0) return 1;
     const k = model === "standard" ? 5.84509376 : 5.75;
@@ -128,6 +128,7 @@ const BTCWithdrawalSimulator = () => {
 
     // シミュレーション実行
     const simulate = () => {
+        console.log("simulate called"); // デバッグ用
         if (!validateInputs()) return;
 
         try {
@@ -222,10 +223,11 @@ const BTCWithdrawalSimulator = () => {
                 });
 
                 currentBTC = yearEndBTC; // 現在のBTC保有量を更新
-                if (currentBTC < 0) break; // 一応、負の値になったら終了
+                if (currentBTC < 0 || year >= TARGET_YEAR) break; // 修正: 条件を追加
             }
 
             setResults(simulationResults);
+            console.log(simulationResults); //デバッグ用
             setErrors({}); // エラーがない場合はクリア
         } catch (err) {
             setErrors({ simulation: "シミュレーション中にエラーが発生しました: " + err.message });
@@ -233,11 +235,14 @@ const BTCWithdrawalSimulator = () => {
     };
 
     const chartData = useMemo(() => {
-        return results.map(result => ({
-            year: result.year,
-            btcHeld: result.remainingBTC, // remainingBTC を使用
-            totalValue: result.totalValue,
-        }));
+        if (results.length > 0) { // results が空でない場合のみ map を実行
+            return results.map(result => ({
+                year: result.year,
+                btcHeld: result.remainingBTC,
+                totalValue: result.totalValue,
+            }));
+        }
+        return []; // results が空の場合は空配列を返す
     }, [results]);
 
     return (
@@ -246,7 +251,7 @@ const BTCWithdrawalSimulator = () => {
                 <h1 className="text-2xl font-bold text-white text-center mb-6">ビットコイン取り崩しシミュレーター</h1>
 
                 <div className="space-y-6">
-                    {/* ... (入力フォーム部分は省略) ... */}
+                    {/* ... (入力フォーム部分) ... */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <InputField label="保有BTC" tooltip={TOOLTIPS.initialBTC} error={errors.initialBTC}>
                             <input
@@ -444,27 +449,68 @@ const BTCWithdrawalSimulator = () => {
                         <div className="bg-gray-700 p-4 rounded-lg">
                             <h2 className="text-lg font-semibold text-white mb-4">資産推移</h2>
                             <ResponsiveContainer width="100%" height={400}>
-                                {/* ... (LineChart のコードは後述) ... */}
+                                <LineChart data={chartData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="year" tick={{ fill: 'white' }} />
+                                    <YAxis yAxisId="left" orientation="left" tickFormatter={(value) => formatBTC(value, 4)} tick={{ fill: 'white' }} domain={['auto', 'auto']} />
+                                    <YAxis yAxisId="right" orientation="right" tickFormatter={formatCurrency} tick={{ fill: 'white' }} domain={['auto', 'auto']} />
+                                    <Tooltip
+                                        formatter={(value, name) => {
+                                            if (name === 'btcHeld') {
+                                                return [formatBTC(value), '残り保有BTC'];
+                                            } else if (name === 'totalValue') {
+                                                return [formatCurrency(value), '資産評価額'];
+                                            }
+                                            return [value, name];
+                                        }}
+                                        labelStyle={{ color: 'black' }}
+                                    />
+                                    <Legend />
+                                    <Line yAxisId="left" type="monotone" dataKey="btcHeld" stroke="#8884d8" name="残り保有BTC" />
+                                    <Line yAxisId="right" type="monotone" dataKey="totalValue" stroke="#82ca9d" name="資産評価額" />
+                                </LineChart>
                             </ResponsiveContainer>
                         </div>
 
                         <div className="bg-gray-700 p-4 rounded-lg overflow-x-auto">
                             <div className="flex justify-between mb-2">
                                 <h3 className="text-md font-semibold text-white">シミュレーション結果</h3>
-                                {showSecondPhase && (
+                                {results.length > 0 && showSecondPhase && (
                                     <div className="flex items-center space-x-4">
-                                        <div className="flex items-center">
-                                            <div className="w-3 h-3 bg-blue-500 mr-2"></div>
-                                            <span className="text-xs text-white">1段階目</span>
-                                        </div>
-                                        <div className="flex items-center">
-                                            <div className="w-3 h-3 bg-purple-500 mr-2"></div>
-                                            <span className="text-xs text-white">2段階目</span>
-                                        </div>
+
                                     </div>
                                 )}
                             </div>
-                            {/* ... (テーブルのコード) ... */}
+                            <table className="min-w-full divide-y divide-gray-600">
+                                <thead className="bg-gray-600">
+                                    <tr>
+                                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">年</th>
+                                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">BTC価格</th>
+                                        {showSecondPhase && (
+                                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">段階</th>
+                                        )}
+                                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">取り崩し率</th>
+                                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">取り崩し額</th>
+                                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">取り崩しBTC</th>
+                                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">残り保有BTC</th>
+                                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">資産評価額</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-gray-800 divide-y divide-gray-600">
+                                    {results.map((result) => (
+                                        <tr key={result.year}>
+                                            <td className="px-4 py-2 whitespace-nowrap text-sm text-white">{result.year}</td>
+                                            <td className="px-4 py-2 whitespace-nowrap text-sm text-white">{formatCurrency(result.btcPrice, 'JPY')}</td>
+                                            {showSecondPhase && (<td className="px-4 py-2 whitespace-nowrap text-sm text-white">{result.phase}</td>)}
+                                            <td className="px-4 py-2 whitespace-nowrap text-sm text-white">{typeof result.withdrawalRate === 'number' ? result.withdrawalRate.toFixed(2) + "%" : result.withdrawalRate}</td>
+                                            <td className="px-4 py-2 whitespace-nowrap text-sm text-white">{typeof result.withdrawalAmount === 'number' ? formatCurrency(result.withdrawalAmount, 'JPY') : result.withdrawalAmount}</td>
+                                            <td className="px-4 py-2 whitespace-nowrap text-sm text-white">{typeof result.withdrawalBTC === 'number' ? formatBTC(result.withdrawalBTC) : result.withdrawalBTC}</td>
+                                            <td className="px-4 py-2 whitespace-nowrap text-sm text-white">{formatBTC(result.remainingBTC, 4)}</td> {/* 小数点以下4桁 */}
+                                            <td className="px-4 py-2 whitespace-nowrap text-sm text-white">{formatCurrency(result.totalValue, 'JPY')}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 )}

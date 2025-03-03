@@ -1,4 +1,3 @@
-// src/hooks/useBitcoinPrice.js
 import { useState, useEffect, useRef } from 'react';
 import { useExchangeRate } from './useExchangeRate';
 
@@ -6,6 +5,10 @@ const CACHE_TIME = 5 * 60 * 1000; // 5分
 const API_POLL_INTERVAL = 60 * 1000; // 1分 (必要に応じて調整)
 const API_TIMEOUT = 10 * 1000; // 10秒 (fetchのタイムアウト)
 
+/**
+ * ビットコインの現在価格を取得するカスタムフック
+ * @returns {Object} ビットコイン価格データと状態
+ */
 export const useBitcoinPrice = () => {
   const [bitcoinPriceData, setBitcoinPriceData] = useState({
     loading: true,
@@ -83,10 +86,11 @@ export const useBitcoinPrice = () => {
 
     return () => {
       clearInterval(intervalId); // クリーンアップ関数でタイマーを解除
-      // AbortController を使用している場合は、ここで abort() を呼ぶ必要はありません。
-      // fetch が中断されると、自動的に AbortError が発生します。
     };
-  }, [exchangeRateData]); // 依存配列に exchangeRateData 全体を追加
+  }, [exchangeRateData.exchangeRate]); // 依存配列に exchangeRateData.exchangeRate を追加
 
   return bitcoinPriceData;
 };
+
+// デフォルトエクスポートも追加
+export default useBitcoinPrice;
