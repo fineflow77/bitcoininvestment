@@ -6,6 +6,7 @@ interface DataContainerProps {
     error: Error | null;
     children: React.ReactNode;
     loadingMessage?: string;
+    noDataMessage?: string;
     className?: string;
 }
 
@@ -14,6 +15,7 @@ const DataContainer: React.FC<DataContainerProps> = ({
     error,
     children,
     loadingMessage = 'データを読み込み中...',
+    noDataMessage = 'データがありません',
     className = '',
 }) => {
     if (isLoading) {
@@ -34,7 +36,11 @@ const DataContainer: React.FC<DataContainerProps> = ({
         );
     }
 
-    return <>{children}</>;
+    if (!children) {
+        return <div className={`text-gray-400 ${className}`}>{noDataMessage}</div>;
+    }
+
+    return <div className={className}>{children}</div>;
 };
 
 export default DataContainer;

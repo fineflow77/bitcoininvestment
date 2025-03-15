@@ -1,12 +1,10 @@
 import React, { useState, useMemo } from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { ChevronDown, ChevronUp, Settings, HelpCircle } from "lucide-react";
-import { formatYen, formatBTC, formatPercentage } from '../../utils/formatters';
-import { DEFAULTS, CURRENT_YEAR, PriceModel } from '../../utils/constants';
+import { formatYen, formatBTC } from '../../utils/formatters';
+import { DEFAULTS, PriceModel } from '../../utils/constants';
 import { useInvestmentSimulation, SimulationInputs } from '../../hooks/useInvestmentSimulation';
-import LoadingSpinner from '../ui/LoadingSpinner';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-// Home.tsx から借用したスタイル
 const typography = {
     h1: 'text-3xl sm:text-4xl font-extrabold tracking-tight',
     h2: 'text-xl sm:text-2xl font-semibold tracking-tight',
@@ -26,7 +24,6 @@ const colors = {
     textMuted: 'text-gray-400',
 };
 
-// ツールチップアイコンコンポーネント
 const TooltipIcon: React.FC<{ content: React.ReactNode }> = ({ content }) => (
     <div className="group relative inline-block ml-2">
         <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-300 cursor-help transition-colors duration-200" />
@@ -36,7 +33,6 @@ const TooltipIcon: React.FC<{ content: React.ReactNode }> = ({ content }) => (
     </div>
 );
 
-// インプットフィールドコンポーネント
 const InputField: React.FC<{
     label: string;
     tooltip?: React.ReactNode;
@@ -71,34 +67,29 @@ const TOOLTIPS = {
 
 const InvestmentSimulator: React.FC = () => {
     const [initialInvestmentType, setInitialInvestmentType] = useState<'btc' | 'jpy'>("btc");
-    const [initialInvestment, setInitialInvestment] = useState("");
-    const [initialBtcHolding, setInitialBtcHolding] = useState("");
-    const [monthlyInvestment, setMonthlyInvestment] = useState("");
-    const [years, setYears] = useState("10");
+    const [initialInvestment, setInitialInvestment] = useState<number | string>(DEFAULTS.INITIAL_INVESTMENT);
+    const [initialBtcHolding, setInitialBtcHolding] = useState<number | string>(DEFAULTS.INITIAL_BTC_HOLDING);
+    const [monthlyInvestment, setMonthlyInvestment] = useState<number | string>(DEFAULTS.MONTHLY_INVESTMENT);
+    const [years, setYears] = useState<number | string>(DEFAULTS.YEARS);
     const [priceModel, setPriceModel] = useState<PriceModel>(PriceModel.STANDARD);
     const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
-    const [exchangeRate, setExchangeRate] = useState(DEFAULTS.EXCHANGE_RATE.toString());
-    const [inflationRate, setInflationRate] = useState(DEFAULTS.INFLATION_RATE.toString());
-    const [isCalculating, setIsCalculating] = useState(false);
+    const [exchangeRate, setExchangeRate] = useState<number | string>(DEFAULTS.EXCHANGE_RATE);
+    const [inflationRate, setInflationRate] = useState<number | string>(DEFAULTS.INFLATION_RATE);
 
     const { results, errors, simulate } = useInvestmentSimulation();
 
     const runSimulation = () => {
-        setIsCalculating(true);
         const inputs: SimulationInputs = {
             initialInvestmentType,
-            initialInvestment,
-            initialBtcHolding,
-            monthlyInvestment,
-            years,
+            initialInvestment: Number(initialInvestment) || 0,
+            initialBtcHolding: Number(initialBtcHolding) || 0,
+            monthlyInvestment: Number(monthlyInvestment) || 0,
+            years: Number(years) || 0,
             priceModel,
-            exchangeRate,
-            inflationRate
+            exchangeRate: Number(exchangeRate) || DEFAULTS.EXCHANGE_RATE,
+            inflationRate: Number(inflationRate) || DEFAULTS.INFLATION_RATE,
         };
-        setTimeout(() => {
-            simulate(inputs);
-            setIsCalculating(false);
-        }, 500);
+        simulate(inputs);
     };
 
     const chartData = useMemo(() => {
@@ -147,7 +138,7 @@ const InvestmentSimulator: React.FC = () => {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                         {initialInvestmentType === "jpy" ? (
-                            <InputField label="初期投資額（円）" tooltip={TOOLTIPS.initialInvestment} error={errors.initialInvestment}>
+                            <InputField label="初期投資額（円）" tooltip={TOOLTIPS.initialInvestment} error={errors?.initialInvestment}>
                                 <input
                                     type="number"
                                     value={initialInvestment}
@@ -159,7 +150,7 @@ const InvestmentSimulator: React.FC = () => {
                                 />
                             </InputField>
                         ) : (
-                            <InputField label="初期保有BTC" tooltip={TOOLTIPS.initialBtcHolding} error={errors.initialBtcHolding}>
+                            <InputField label="初期保有BTC" tooltip={TOOLTIPS.initialBtcHolding} error={errors?.initialBtcHolding}>
                                 <input
                                     type="number"
                                     value={initialBtcHolding}
@@ -172,7 +163,7 @@ const InvestmentSimulator: React.FC = () => {
                             </InputField>
                         )}
 
-                        <InputField label="毎月積み立て額（円）" tooltip={TOOLTIPS.monthlyInvestment} error={errors.monthlyInvestment}>
+                        <InputField label="毎月積み立て額（円）" tooltip={TOOLTIPS.monthlyInvestment} error={errors?.monthlyInvestment}>
                             <div className="relative">
                                 <input
                                     type="number"
@@ -186,7 +177,7 @@ const InvestmentSimulator: React.FC = () => {
                             </div>
                         </InputField>
 
-                        <InputField label="積み立て年数" tooltip={TOOLTIPS.years} error={errors.years}>
+                        <InputField label="積み立て年数" tooltip={TOOLTIPS.years} error={errors?.years}>
                             <input
                                 type="number"
                                 value={years}
@@ -202,7 +193,7 @@ const InvestmentSimulator: React.FC = () => {
                         <InputField label="価格予測モデル" tooltip={TOOLTIPS.priceModel}>
                             <select
                                 value={priceModel}
-                                onChange={(e) => setPriceModel(e.target.value as 'standard' | 'conservative')}
+                                onChange={(e) => setPriceModel(e.target.value as PriceModel)}
                                 className="w-full bg-gray-700 p-2 rounded-md text-gray-100 focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all duration-200"
                             >
                                 <option value={PriceModel.STANDARD}>標準モデル</option>
@@ -229,7 +220,7 @@ const InvestmentSimulator: React.FC = () => {
                         {showAdvancedOptions && (
                             <div className="mt-4 space-y-4 p-4 bg-gray-700 rounded-md">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <InputField label="為替レート (円/USD)" tooltip={TOOLTIPS.exchangeRate} error={errors.exchangeRate}>
+                                    <InputField label="為替レート (円/USD)" tooltip={TOOLTIPS.exchangeRate} error={errors?.exchangeRate}>
                                         <input
                                             type="number"
                                             value={exchangeRate}
@@ -239,7 +230,7 @@ const InvestmentSimulator: React.FC = () => {
                                             placeholder="例: 150"
                                         />
                                     </InputField>
-                                    <InputField label="インフレ率 (%)" tooltip={TOOLTIPS.inflationRate} error={errors.inflationRate}>
+                                    <InputField label="インフレ率 (%)" tooltip={TOOLTIPS.inflationRate} error={errors?.inflationRate}>
                                         <input
                                             type="number"
                                             value={inflationRate}
@@ -257,167 +248,115 @@ const InvestmentSimulator: React.FC = () => {
                     <div className="mt-6">
                         <button
                             onClick={runSimulation}
-                            disabled={isCalculating}
-                            className={`${colors.accent} w-full p-3 rounded-lg text-lg font-semibold transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-opacity-50 shadow-md flex justify-center items-center ${isCalculating ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            className={`${colors.accent} w-full p-3 rounded-lg text-lg font-semibold transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-opacity-50 shadow-md flex justify-center items-center`}
                         >
-                            {isCalculating ? (
-                                <>
-                                    <LoadingSpinner size="sm" className="mr-2" />
-                                    計算中...
-                                </>
-                            ) : (
-                                'シミュレーション実行'
-                            )}
+                            シミュレーション実行
                         </button>
                     </div>
                 </div>
 
-                {errors.simulation && (
+                {errors?.simulation && (
                     <div className="mt-4 p-3 bg-red-900 text-gray-100 rounded-md">{errors.simulation}</div>
                 )}
+            </div>
 
-                {results.length > 0 && (
-                    <div className="mt-8 space-y-6">
-                        <div className={`${colors.cardBg} p-6 rounded-xl shadow-md ${colors.cardBorder}`}>
-                            <h2 className={`${typography.h2} ${colors.textPrimary} mb-4`}>資産推移</h2>
-                            <ResponsiveContainer width="100%" height={400}>
-                                <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#4A4A5A" />
-                                    <XAxis dataKey="year" stroke="#e2e8f0" tick={{ fontSize: 12, fill: '#e2e8f0' }} />
-                                    <YAxis
-                                        yAxisId="left"
-                                        stroke="#34D399"
-                                        tickFormatter={(value) => formatBTC(value, 4)}
-                                        tick={{ fill: '#e2e8f0' }}
-                                        domain={['auto', 'auto']}
-                                        label={{
-                                            value: 'BTC保有量',
-                                            angle: -90,
-                                            position: 'insideLeft',
-                                            style: { fill: '#34D399', fontSize: 12, fontWeight: 500 }
-                                        }}
-                                    />
-                                    <YAxis
-                                        yAxisId="right"
-                                        orientation="right"
-                                        stroke="#60A5FA"
-                                        tickFormatter={(value) => formatYen(value, 2)}
-                                        tick={{ fill: '#e2e8f0' }}
-                                        domain={['auto', 'auto']}
-                                        label={{
-                                            value: '資産評価額',
-                                            angle: 90,
-                                            position: 'insideRight',
-                                            style: { fill: '#60A5FA', fontSize: 12, fontWeight: 500 }
-                                        }}
-                                        width={80}
-                                    />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: 'rgba(26, 32, 44, 0.95)', border: '1px solid rgba(82, 82, 91, 0.8)', borderRadius: '8px' }}
-                                        labelStyle={{ color: '#e2e8f0' }}
-                                        formatter={(value, name) => {
-                                            if (typeof name === 'string') {
-                                                if (name === "btcHeld") return [formatBTC(value as number, 4), "BTC保有量"];
-                                                if (name === "totalValue") return [formatYen(value as number, 2), "資産評価額"];
-                                            }
-                                            return [value, name];
-                                        }}
-                                    />
-                                    <Legend wrapperStyle={{ color: '#e2e8f0' }} verticalAlign="top" height={36} />
-                                    <Line
-                                        yAxisId="left"
-                                        type="monotone"
-                                        dataKey="btcHeld"
-                                        name="BTC保有量"
-                                        stroke="#34D399"
-                                        dot={false}
-                                    />
-                                    <Line
-                                        yAxisId="right"
-                                        type="monotone"
-                                        dataKey="totalValue"
-                                        name="資産評価額"
-                                        stroke="#60A5FA"
-                                        dot={false}
-                                    />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
+            {results && results.length > 0 && (
+                <div className="mt-8 space-y-6">
+                    <div className={`${colors.cardBg} p-6 rounded-xl shadow-md ${colors.cardBorder}`}>
+                        <h2 className={`${typography.h2} ${colors.textPrimary} mb-4`}>資産推移</h2>
+                        <ResponsiveContainer width="100%" height={400}>
+                            <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#4A4A5A" />
+                                <XAxis dataKey="year" stroke="#e2e8f0" tick={{ fontSize: 12, fill: '#e2e8f0' }} />
+                                <YAxis
+                                    yAxisId="left"
+                                    stroke="#34D399"
+                                    tickFormatter={(value: number) => formatBTC(value, 4)}
+                                    tick={{ fill: '#e2e8f0' }}
+                                    domain={['auto', 'auto']}
+                                    label={{
+                                        value: 'BTC保有量',
+                                        angle: -90,
+                                        position: 'insideLeft',
+                                        style: { fill: '#34D399', fontSize: 12, fontWeight: 500 }
+                                    }}
+                                />
+                                <YAxis
+                                    yAxisId="right"
+                                    orientation="right"
+                                    stroke="#60A5FA"
+                                    tickFormatter={(value: number) => formatYen(value, 2)}
+                                    tick={{ fill: '#e2e8f0' }}
+                                    domain={['auto', 'auto']}
+                                    label={{
+                                        value: '資産評価額',
+                                        angle: 90,
+                                        position: 'insideRight',
+                                        style: { fill: '#60A5FA', fontSize: 12, fontWeight: 500 }
+                                    }}
+                                    width={80}
+                                />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: 'rgba(26, 32, 44, 0.95)', border: '1px solid rgba(82, 82, 91, 0.8)', borderRadius: '8px' }}
+                                    labelStyle={{ color: '#e2e8f0' }}
+                                    formatter={(value: number, name: string) => {
+                                        if (name === "btcHeld") return [formatBTC(value, 4), "BTC保有量"];
+                                        if (name === "totalValue") return [formatYen(value, 2), "資産評価額"];
+                                        return [value, name];
+                                    }}
+                                />
+                                <Legend wrapperStyle={{ color: '#e2e8f0' }} verticalAlign="top" height={36} />
+                                <Line
+                                    yAxisId="left"
+                                    type="monotone"
+                                    dataKey="btcHeld"
+                                    name="BTC保有量"
+                                    stroke="#34D399"
+                                    dot={false}
+                                />
+                                <Line
+                                    yAxisId="right"
+                                    type="monotone"
+                                    dataKey="totalValue"
+                                    name="資産評価額"
+                                    stroke="#60A5FA"
+                                    dot={false}
+                                />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
 
-                        <div className={`block md:hidden ${colors.cardBg} p-4 rounded-xl shadow-md space-y-3`}>
-                            <h3 className={`${typography.h3} ${colors.textPrimary} mb-2`}>ハイライト</h3>
-                            <div className="bg-gray-700 p-3 rounded-md">
-                                <div className={`${typography.small} ${colors.textMuted}`}>初期投資額</div>
-                                <div className={`${typography.body} ${colors.textPrimary}`}>
-                                    {initialInvestmentType === "jpy"
-                                        ? formatYen(parseFloat(initialInvestment) || 0, 2)
-                                        : formatBTC(parseFloat(initialBtcHolding) || 0, 4)}
-                                </div>
-                            </div>
-                            <div className="bg-gray-700 p-3 rounded-md">
-                                <div className={`${typography.small} ${colors.textMuted}`}>月額積立金</div>
-                                <div className={`${typography.body} ${colors.textPrimary}`}>
-                                    {formatYen(parseFloat(monthlyInvestment) || 0, 2)}
-                                </div>
-                            </div>
-                            <div className="bg-gray-700 p-3 rounded-md">
-                                <div className={`${typography.small} ${colors.textMuted}`}>5年後の資産</div>
-                                <div className={`${typography.body} ${colors.textPrimary}`}>
-                                    {formatYen(
-                                        results.find(r => r.year === CURRENT_YEAR + 5)?.totalValue || 0,
-                                        2
-                                    )}
-                                </div>
-                            </div>
-                            <div className="bg-gray-700 p-3 rounded-md">
-                                <div className={`${typography.small} ${colors.textMuted}`}>10年後の資産</div>
-                                <div className={`${typography.body} ${colors.textPrimary}`}>
-                                    {formatYen(
-                                        results.find(r => r.year === CURRENT_YEAR + 10)?.totalValue || 0,
-                                        2
-                                    )}
-                                </div>
-                            </div>
-                            <div className="bg-gray-700 p-3 rounded-md">
-                                <div className={`${typography.small} ${colors.textMuted}`}>シミュレーション終了時の資産</div>
-                                <div className={`${typography.body} ${colors.textPrimary}`}>
-                                    {formatYen(results[results.length - 1]?.totalValue || 0, 2)}
-                                </div>
+                    <div className={`block md:hidden ${colors.cardBg} p-4 rounded-xl shadow-md space-y-3`}>
+                        <h3 className={`${typography.h3} ${colors.textPrimary} mb-2`}>ハイライト</h3>
+                        <div className="bg-gray-700 p-3 rounded-md">
+                            <div className={`${typography.small} ${colors.textMuted}`}>初期投資額</div>
+                            <div className={`${typography.body} ${colors.textPrimary}`}>
+                                {initialInvestmentType === "jpy"
+                                    ? formatYen(Number(initialInvestment) || 0, 2)
+                                    : formatBTC(Number(initialBtcHolding) || 0, 4)}
                             </div>
                         </div>
-
-                        <div className={`hidden md:block ${colors.cardBg} p-6 rounded-xl shadow-md ${colors.cardBorder}`}>
-                            <h3 className={`${typography.h3} ${colors.textPrimary} mb-4`}>シミュレーション結果</h3>
-                            <div className="overflow-x-auto -mx-6 px-6">
-                                <table className="min-w-full divide-y divide-gray-700">
-                                    <thead className="bg-gray-700">
-                                        <tr>
-                                            <th className={`${typography.small} px-4 py-3 text-left ${colors.textPrimary} uppercase tracking-wider`}>年</th>
-                                            <th className={`${typography.small} px-4 py-3 text-left ${colors.textPrimary} uppercase tracking-wider`}>BTC価格</th>
-                                            <th className={`${typography.small} px-4 py-3 text-left ${colors.textPrimary} uppercase tracking-wider`}>年間積み立て額</th>
-                                            <th className={`${typography.small} px-4 py-3 text-left ${colors.textPrimary} uppercase tracking-wider`}>追加BTC量</th>
-                                            <th className={`${typography.small} px-4 py-3 text-left ${colors.textPrimary} uppercase tracking-wider`}>BTC保有量</th>
-                                            <th className={`${typography.small} px-4 py-3 text-left ${colors.textPrimary} uppercase tracking-wider`}>資産評価額</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-700">
-                                        {results.map((result, index) => (
-                                            <tr key={index} className={index % 2 === 0 ? "bg-gray-800" : "bg-gray-750 hover:bg-gray-700 transition-colors duration-200"}>
-                                                <td className={`${typography.body} px-4 py-2 whitespace-nowrap ${colors.textPrimary}`}>{result.year}</td>
-                                                <td className={`${typography.body} px-4 py-2 whitespace-nowrap ${colors.textPrimary}`}>{formatYen(result.btcPrice, 2)}</td>
-                                                <td className={`${typography.body} px-4 py-2 whitespace-nowrap ${colors.textPrimary}`}>{formatYen(result.annualInvestment, 2)}</td>
-                                                <td className={`${typography.body} px-4 py-2 whitespace-nowrap ${colors.textPrimary}`}>{formatBTC(result.btcPurchased, 4)}</td>
-                                                <td className={`${typography.body} px-4 py-2 whitespace-nowrap ${colors.textPrimary}`}>{formatBTC(result.btcHeld, 4)}</td>
-                                                <td className={`${typography.body} px-4 py-2 whitespace-nowrap ${colors.textPrimary}`}>{formatYen(result.totalValue, 2)}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                        <div className="bg-gray-700 p-3 rounded-md">
+                            <div className={`${typography.small} ${colors.textMuted}`}>月額積立金</div>
+                            <div className={`${typography.body} ${colors.textPrimary}`}>
+                                {formatYen(Number(monthlyInvestment) || 0, 2)}
+                            </div>
+                        </div>
+                        <div className="bg-gray-700 p-3 rounded-md">
+                            <div className={`${typography.small} ${colors.textMuted}`}>最終BTC保有量</div>
+                            <div className={`${typography.body} ${colors.textPrimary}`}>
+                                {results.length > 0 ? formatBTC(results[results.length - 1].btcHeld, 4) : "N/A"}
+                            </div>
+                        </div>
+                        <div className="bg-gray-700 p-3 rounded-md">
+                            <div className={`${typography.small} ${colors.textMuted}`}>最終資産評価額</div>
+                            <div className={`${typography.body} ${colors.textPrimary}`}>
+                                {results.length > 0 ? formatYen(results[results.length - 1].totalValue, 2) : "N/A"}
                             </div>
                         </div>
                     </div>
-                )}
-            </div>
+                </div>
+            )}
         </div>
     );
 };

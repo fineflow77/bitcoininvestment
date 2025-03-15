@@ -1,9 +1,8 @@
 import React from 'react';
-import PowerLawChart, { PowerLawChartProps } from './PowerLawChart';
-import { ChartDataPoint } from '../../types'; // 型インポート
+import PowerLawChart from './PowerLawChart';
+import { PowerLawChartProps } from '../../types';
 
 interface PowerLawChartWrapperProps extends PowerLawChartProps {
-    showRSquared?: boolean;
     chartTitle?: string;
 }
 
@@ -15,7 +14,6 @@ const PowerLawChartWrapper: React.FC<PowerLawChartWrapperProps> = ({
     height,
     isZoomed,
     powerLawPosition,
-    showRSquared = false,
     chartTitle = 'パワーロー価格予測',
 }) => {
     return (

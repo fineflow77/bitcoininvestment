@@ -1,36 +1,44 @@
+export type PriceModelType = 'standard' | 'conservative';
+
 export interface ChartDataPoint {
     date: number;
     price: number | null;
     medianModel: number;
     supportModel: number;
-    isFuture: boolean;
     daysSinceGenesis: number;
-}
-
-export interface BitcoinData {
-    prices: {
-        usd: number;
-        jpy: number;
-    };
-    timestamp: string;
+    isFuture?: boolean;
 }
 
 export interface PowerLawChartProps {
     rSquared: number;
     chartData: ChartDataPoint[];
     exchangeRate: number;
-    currentPrice: number | null | undefined; // null や undefined を許容
+    currentPrice?: number;
     height: number;
-    isZoomed: boolean;
-    powerLawPosition: number | null;
+    showPositionInfo?: boolean;
+    isZoomed?: boolean;
+    powerLawPosition?: number | null;
+    xAxisScale?: 'linear' | 'log';
+    yAxisScale?: 'linear' | 'log';
 }
 
-export interface DataContainerProps {
-    children: React.ReactNode;
-    isLoading: boolean;
+export interface BitcoinData {
+    loading: boolean;
     error: Error | null;
-    loadingMessage: string;
-    noDataMessage?: string; // オプション
+    currentPrice: PriceResponse | null;
+    exchangeRate: number;
+    weeklyPrices: { date: string; price: number }[];
+    powerLawData: ChartDataPoint[];
+    dailyPrices: { date: string; price: number }[];
+    dailyPowerLawData: ChartDataPoint[];
+    rSquared: number | null;
+    // dataSources?: { currentPrice?: string }; // 将来用にコメントアウト
 }
 
-export type PriceModelType = 'STANDARD' | 'ALTERNATIVE' | 'conservative' | 'standard'; // 拡張
+export interface PriceResponse {
+    prices: {
+        usd: number;
+        jpy: number;
+    };
+    timestamp: string;
+}

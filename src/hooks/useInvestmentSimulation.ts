@@ -1,17 +1,17 @@
 import { useState } from 'react';
-import { getDaysSinceGenesis } from '../utils/dateUtils'; // calculateDays を getDaysSinceGenesis に仮定
+import { getDaysSinceGenesis } from '../utils/dateUtils';
 import { btcPriceMedian } from '../utils/models';
-import { DEFAULTS, CURRENT_YEAR, TRANSITION_START_YEAR, TARGET_YEAR, PriceModel } from '../utils/constants';
+import { CURRENT_YEAR, TRANSITION_START_YEAR, TARGET_YEAR, PriceModel } from '../utils/constants';
 
 export interface SimulationInputs {
     initialInvestmentType: 'btc' | 'jpy';
-    initialInvestment: string;
-    initialBtcHolding: string;
-    monthlyInvestment: string;
-    years: string;
+    initialInvestment: number;
+    initialBtcHolding: number;
+    monthlyInvestment: number;
+    years: number;
     priceModel: PriceModel;
-    exchangeRate: string;
-    inflationRate: string;
+    exchangeRate: number;
+    inflationRate: number;
 }
 
 export interface InvestmentSimulationResult {
@@ -24,7 +24,7 @@ export interface InvestmentSimulationResult {
     isInvestmentPeriod: boolean;
 }
 
-interface SimulationErrors {
+export interface SimulationErrors {
     initialInvestment?: string;
     initialBtcHolding?: string;
     monthlyInvestment?: string;
@@ -34,43 +34,41 @@ interface SimulationErrors {
     simulation?: string;
 }
 
+const TRANSITION_CONFIG = {
+    [PriceModel.STANDARD]: { targetScale: 0.41, decayRate: 0.2 },
+    [PriceModel.CONSERVATIVE]: { targetScale: 0.5, decayRate: 0.25 },
+};
+
 export const useInvestmentSimulation = () => {
     const [results, setResults] = useState<InvestmentSimulationResult[]>([]);
     const [errors, setErrors] = useState<SimulationErrors>({});
 
-    // 入力値検証関数
     const validateInputs = (inputs: SimulationInputs): boolean => {
         const newErrors: SimulationErrors = {};
 
         if (inputs.initialInvestmentType === 'jpy') {
-            const initialInvestment = parseFloat(inputs.initialInvestment);
-            if (!inputs.initialInvestment || isNaN(initialInvestment) || initialInvestment < 0) {
+            if (inputs.initialInvestment < 0 || isNaN(inputs.initialInvestment)) {
                 newErrors.initialInvestment = '0以上の値を入力してください';
             }
         } else {
-            const initialBtcHolding = parseFloat(inputs.initialBtcHolding);
-            if (!inputs.initialBtcHolding || isNaN(initialBtcHolding) || initialBtcHolding < 0) {
+            if (inputs.initialBtcHolding < 0 || isNaN(inputs.initialBtcHolding)) {
                 newErrors.initialBtcHolding = '0以上の値を入力してください';
             }
         }
 
-        const monthlyInvestment = parseFloat(inputs.monthlyInvestment);
-        if (!inputs.monthlyInvestment || isNaN(monthlyInvestment) || monthlyInvestment <= 0) {
+        if (inputs.monthlyInvestment <= 0 || isNaN(inputs.monthlyInvestment)) {
             newErrors.monthlyInvestment = '有効な値を入力してください';
         }
 
-        const years = parseInt(inputs.years);
-        if (!inputs.years || isNaN(years) || years <= 0 || years > 50) {
+        if (inputs.years <= 0 || inputs.years > 50 || isNaN(inputs.years)) {
             newErrors.years = '1～50年で入力してください';
         }
 
-        const exchangeRate = parseFloat(inputs.exchangeRate);
-        if (!inputs.exchangeRate || isNaN(exchangeRate) || exchangeRate <= 0) {
+        if (inputs.exchangeRate <= 0 || isNaN(inputs.exchangeRate)) {
             newErrors.exchangeRate = '0より大きい値を入力してください';
         }
 
-        const inflationRate = parseFloat(inputs.inflationRate);
-        if (!inputs.inflationRate || isNaN(inflationRate) || inflationRate < 0) {
+        if (inputs.inflationRate < 0 || isNaN(inputs.inflationRate)) {
             newErrors.inflationRate = '0以上の値を入力してください';
         }
 
@@ -78,28 +76,20 @@ export const useInvestmentSimulation = () => {
         return Object.keys(newErrors).length === 0;
     };
 
-    // シミュレーション実行関数
     const simulate = (inputs: SimulationInputs): void => {
         if (!validateInputs(inputs)) return;
 
         try {
             const simulationResults: InvestmentSimulationResult[] = [];
-            const exchangeRateNum = parseFloat(inputs.exchangeRate);
-            const inflationRateNum = parseFloat(inputs.inflationRate) / 100;
-            const monthlyInvestmentNum = parseFloat(inputs.monthlyInvestment);
-            const yearsNum = parseInt(inputs.years);
+            const config = TRANSITION_CONFIG[inputs.priceModel];
             const startYear = CURRENT_YEAR;
-            const endYear = Math.max(TARGET_YEAR, startYear + yearsNum);
-            let basePriceUSD: number | null = null;
-            let baseDays: number | null = null;
-            let btcHeld = inputs.initialInvestmentType === 'jpy' ? 0 : parseFloat(inputs.initialBtcHolding) || 0;
-            let initialInvestmentValue = inputs.initialInvestmentType === 'jpy' ? parseFloat(inputs.initialInvestment) || 0 : 0;
+            const endYear = Math.max(TARGET_YEAR, startYear + inputs.years);
+            let btcHeld = inputs.initialInvestmentType === 'jpy' ? 0 : inputs.initialBtcHolding;
+            let initialInvestmentValue = inputs.initialInvestmentType === 'jpy' ? inputs.initialInvestment : 0;
 
-            // 初年度のBTC価格を計算
-            const initialDays = getDaysSinceGenesis(new Date(startYear, 0, 1)); // 1月1日基準
+            const initialDays = getDaysSinceGenesis(new Date(startYear, 0, 1));
             const initialBtcPriceUSD = btcPriceMedian(initialDays, inputs.priceModel);
-            const initialExchangeRate = exchangeRateNum;
-            const initialBtcPriceJPY = initialBtcPriceUSD * initialExchangeRate;
+            const initialBtcPriceJPY = initialBtcPriceUSD * inputs.exchangeRate;
 
             if (inputs.initialInvestmentType === 'jpy') {
                 btcHeld = initialInvestmentValue / initialBtcPriceJPY;
@@ -107,39 +97,31 @@ export const useInvestmentSimulation = () => {
 
             let currentValueJPY = btcHeld * initialBtcPriceJPY;
 
-            // 各年のシミュレーション
-            for (let year = startYear; year <= endYear; year++) {
-                const isInvestmentPeriod = year < startYear + yearsNum;
-                const days = getDaysSinceGenesis(new Date(year, 0, 1)); // 年初の日数
+            const baseDays = getDaysSinceGenesis(new Date(TRANSITION_START_YEAR - 1, 0, 1));
+            const basePriceUSD = btcPriceMedian(baseDays, inputs.priceModel);
 
-                // BTC価格計算（パワーローモデル）
+            for (let year = startYear; year <= endYear; year++) {
+                const isInvestmentPeriod = year < startYear + inputs.years;
+                const days = getDaysSinceGenesis(new Date(year, 0, 1));
+
                 let btcPriceUSD = btcPriceMedian(days, inputs.priceModel);
                 if (year >= TRANSITION_START_YEAR) {
-                    if (!basePriceUSD) {
-                        basePriceUSD = btcPriceMedian(getDaysSinceGenesis(new Date(TRANSITION_START_YEAR - 1, 0, 1)), inputs.priceModel);
-                        baseDays = getDaysSinceGenesis(new Date(TRANSITION_START_YEAR - 1, 0, 1));
-                    }
-                    const targetScale = inputs.priceModel === PriceModel.STANDARD ? 0.41 : 0.5;
-                    const decayRate = inputs.priceModel === PriceModel.STANDARD ? 0.2 : 0.25;
-                    const scale = targetScale + (1.0 - targetScale) * Math.exp(-decayRate * (year - (TRANSITION_START_YEAR - 1)));
+                    const scale = config.targetScale + (1.0 - config.targetScale) * Math.exp(-config.decayRate * (year - (TRANSITION_START_YEAR - 1)));
                     btcPriceUSD = basePriceUSD * Math.pow(btcPriceMedian(days, inputs.priceModel) / btcPriceMedian(baseDays, inputs.priceModel), scale);
                 }
 
-                // インフレ調整後の価格
-                const inflationAdjustedExchangeRate = exchangeRateNum * Math.pow(1 + inflationRateNum, year - startYear);
+                const inflationAdjustedExchangeRate = inputs.exchangeRate * Math.pow(1 + inputs.inflationRate / 100, year - startYear);
                 const btcPriceJPY = btcPriceUSD * inflationAdjustedExchangeRate;
 
-                // 年間投資額と購入BTC量
-                const annualInvestment = isInvestmentPeriod ? monthlyInvestmentNum * 12 : 0;
+                const annualInvestment = isInvestmentPeriod ? inputs.monthlyInvestment * 12 : 0;
                 const btcPurchased = annualInvestment / btcPriceJPY;
 
-                // BTC保有量と評価額
                 btcHeld += btcPurchased;
                 currentValueJPY = btcHeld * btcPriceJPY;
 
                 simulationResults.push({
                     year,
-                    btcPrice: btcPriceJPY, // インフレ調整後の円価格
+                    btcPrice: btcPriceJPY,
                     annualInvestment,
                     btcPurchased,
                     btcHeld,
@@ -150,8 +132,8 @@ export const useInvestmentSimulation = () => {
 
             setResults(simulationResults);
             setErrors({});
-        } catch (err: any) {
-            setErrors({ simulation: `シミュレーションエラー: ${err.message || '不明なエラー'}` });
+        } catch (err) {
+            setErrors({ simulation: `シミュレーションエラー: ${err instanceof Error ? err.message : '不明なエラー'}` });
         }
     };
 
@@ -162,4 +144,3 @@ export const useInvestmentSimulation = () => {
         validateInputs,
     };
 };
-

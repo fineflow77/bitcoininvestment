@@ -8,20 +8,21 @@ interface BitcoinDataDisplayProps {
 }
 
 const BitcoinDataDisplay: React.FC<BitcoinDataDisplayProps> = ({ className = '' }) => {
-    const { loading, error, currentPrice, dataSources } = useBitcoinData();
+    const { loading, error, currentPrice, exchangeRate } = useBitcoinData();
 
     return (
         <DataContainer
             isLoading={loading}
             error={error}
             loadingMessage="ビットコイン価格データを取得中..."
+            noDataMessage="価格データが利用できません"
             className={className}
         >
             <div className="bg-btc-surface p-4 rounded-lg shadow-md">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2">
                     <h2 className="text-lg font-semibold text-btc-text">ビットコイン現在価格</h2>
                     <div className="text-xs text-btc-text-soft mt-1 sm:mt-0">
-                        データソース: {dataSources.currentPrice || 'Unknown'}
+                        データソース: Coindesk {/* 仮の値。必要なら useBitcoinData から取得 */}
                     </div>
                 </div>
 
@@ -44,7 +45,7 @@ const BitcoinDataDisplay: React.FC<BitcoinDataDisplayProps> = ({ className = '' 
                         <div className="flex justify-between items-baseline">
                             <span className="text-btc-text-soft">為替レート:</span>
                             <span className="text-btc-text text-sm">
-                                ¥{currentPrice.prices.exchangeRate.toFixed(2)}
+                                ¥{exchangeRate.toFixed(2)}
                             </span>
                         </div>
 

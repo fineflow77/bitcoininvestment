@@ -7,6 +7,7 @@ import WithdrawalSimulator from './components/simulators/WithdrawalSimulator';
 import PowerLawExplanation from './pages/PowerLawExplanation';
 import PowerLawChart from './components/charts/PowerLawChart';
 import { useBitcoinData } from './hooks/useBitcoinData';
+import { PriceModel } from './utils/constants';
 
 const App: React.FC = () => {
   const {
@@ -18,6 +19,30 @@ const App: React.FC = () => {
     rSquared,
   } = useBitcoinData();
 
+  const powerLawPosition = powerLawData.length > 0 && currentPrice
+    ? ((currentPrice.prices.usd - powerLawData[powerLawData.length - 1].medianModel) / powerLawData[powerLawData.length - 1].medianModel) * 100
+    : null;
+
+  // WithdrawalSimulator用のラッパーコンポーネント
+  const WithdrawalSimulatorWrapper: React.FC = () => (
+    <WithdrawalSimulator
+      initialBTC="0.1"
+      startYear="2025"
+      priceModel={PriceModel.STANDARD}
+      withdrawalType="fixed"
+      withdrawalAmount="200000"
+      withdrawalRate="4"
+      showSecondPhase={false}
+      secondPhaseYear="2030"
+      secondPhaseType="fixed"
+      secondPhaseAmount="200000"
+      secondPhaseRate="4"
+      taxRate="20.315"
+      exchangeRate="150"
+      inflationRate="0"
+    />
+  );
+
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col">
       <Header />
@@ -25,7 +50,7 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/simulators/investment" element={<InvestmentSimulator />} />
-          <Route path="/simulators/withdrawal" element={<WithdrawalSimulator />} />
+          <Route path="/simulators/withdrawal" element={<WithdrawalSimulatorWrapper />} />
           <Route
             path="/power-law-explanation"
             element={
@@ -48,6 +73,7 @@ const App: React.FC = () => {
                       height={500}
                       showPositionInfo={true}
                       isZoomed={false}
+                      powerLawPosition={powerLawPosition}
                     />
                   )
                 }

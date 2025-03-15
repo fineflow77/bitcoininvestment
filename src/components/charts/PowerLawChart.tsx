@@ -1,7 +1,7 @@
-import React, { useMemo, useState, useRef, useCallback } from 'react';
+import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ResponsiveContainer } from 'recharts';
-import { calculatePowerLawPosition, getPowerLawPositionLabel, getPowerLawPositionColor, formatPercentage } from '../../utils/models';
-import { ChartDataPoint } from '../../types'; // 型インポート
+import { getPowerLawPositionLabel, getPowerLawPositionColor, formatPercentage } from '../../utils/models';
+import { PowerLawChartProps } from '../../types';
 
 const COLORS = {
     price: '#8884d8',
@@ -9,50 +9,20 @@ const COLORS = {
     support: '#ff7300',
 };
 
-const CHART_CONFIG = {
-    ANIMATION_DURATION: 300,
-};
-
-interface PowerLawChartProps {
-    rSquared: number;
-    chartData: ChartDataPoint[];
-    exchangeRate: number;
-    currentPrice: number | null | undefined;
-    height: number;
-    isZoomed: boolean;
-    powerLawPosition: number | null;
-}
-
 const PowerLawChart: React.FC<PowerLawChartProps> = ({
     rSquared,
     chartData,
     exchangeRate,
     currentPrice,
     height,
-    isZoomed,
     powerLawPosition,
+    xAxisScale = 'linear',
+    yAxisScale = 'linear',
 }) => {
-    const chartRef = useRef<SVGSVGElement>(null);
-
-    const formatXAxis = (days: any) => {
-        const date = new Date(days * 86400000); // 日数をミリ秒に変換
+    const formatXAxis = (days: number) => {
+        const date = new Date(days * 86400000);
         return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'short' });
     };
-
-    const renderCustomizedLabel = (props: any) => {
-        const { x, y, value } = props;
-        return (
-            <text x={x} y={y} dy={-4} fill="#fff" fontSize={12} textAnchor="middle">
-                {formatPercentage(value / exchangeRate, 0)}
-            </text>
-        );
-    };
-
-    const pointPosition = useMemo(() => {
-        if (!currentPrice || !chartData.length) return null;
-        const data = chartData[chartData.length - 1]; // 最新データ
-        return calculatePowerLawPosition(currentPrice, data.medianModel); // supportModel を削除
-    }, [currentPrice, chartData]);
 
     return (
         <ResponsiveContainer width="100%" height={height}>
@@ -65,7 +35,7 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
                 <XAxis
                     dataKey="daysSinceGenesis"
                     type="number"
-                    domain={['auto', 'auto']}
+                    scale={xAxisScale}
                     tickLine={false}
                     axisLine
                     tickFormatter={formatXAxis}
@@ -76,15 +46,16 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
                 />
                 <YAxis
                     type="number"
+                    scale={yAxisScale}
                     domain={['auto', 'auto']}
-                    tickFormatter={(value) => formatPercentage(value / exchangeRate, 0)}
+                    tickFormatter={(value: number) => formatPercentage(value / exchangeRate, 0)}
                     tick={{ fontSize: 12, fill: '#666', fontWeight: 'normal' }}
                     orientation="left"
                     aria-label="価格軸"
                 />
                 <Tooltip
                     formatter={(value: number) => formatPercentage(value / exchangeRate, 0)}
-                    labelFormatter={(label) => `日数: ${label}`}
+                    labelFormatter={(label: number) => `日数: ${label}`}
                 />
                 <Legend />
                 <Line
@@ -114,9 +85,9 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
                     stroke="#fff"
                     strokeDasharray="3 3"
                     strokeWidth={2}
-                    yAxisId="left"
+                    yAxisId={0}
                 />
-                {pointPosition !== null && (
+                {powerLawPosition !== null && powerLawPosition !== undefined && (
                     <text
                         x={chartData[chartData.length - 1].daysSinceGenesis}
                         y={currentPrice ?? 0}
@@ -125,8 +96,11 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
                         fontSize={12}
                         textAnchor="middle"
                     >
-                        パワーロー位置: <span style={{ color: getPowerLawPositionColor(pointPosition), fontWeight: 'bold' }}>{formatPercentage(pointPosition)}</span>{' '}
-                        (<span>{getPowerLawPositionLabel(pointPosition)}</span>)
+                        パワーロー位置:{' '}
+                        <tspan style={{ color: getPowerLawPositionColor(powerLawPosition), fontWeight: 'bold' }}>
+                            {formatPercentage(powerLawPosition)}
+                        </tspan>{' '}
+                        (<tspan>{getPowerLawPositionLabel(powerLawPosition)}</tspan>)
                     </text>
                 )}
                 <text x={50} y={30} fill="#fff" fontSize={14} fontWeight="bold">
@@ -138,4 +112,4 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
 };
 
 export default PowerLawChart;
-export { PowerLawChartProps }; // 型をエクスポート
+export type { PowerLawChartProps };

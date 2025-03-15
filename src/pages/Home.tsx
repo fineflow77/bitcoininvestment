@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { TrendingUp, Info, ArrowUpRight } from 'lucide-react';
 import { useBitcoinData } from '../hooks/useBitcoinData';
-import PowerLawChart from '../components/charts/PowerLawChartWrapper';
+import PowerLawChart from '../components/charts/PowerLawChart';
 import { formatCurrency } from '../utils/formatters';
 import {
   calculatePowerLawPosition,
@@ -14,23 +14,48 @@ import {
 import DataContainer from '../components/ui/DataContainer';
 import { getDaysSinceGenesis } from '../utils/dateUtils';
 import { ChartLineUp } from 'phosphor-react';
-import { ChartDataPoint, DataContainerProps } from '../types';
+import { ChartDataPoint } from '../types';
 
-// スタイル定義（省略、変更なし）
+const typography = {
+  h2: 'text-xl sm:text-2xl font-semibold tracking-tight',
+  h3: 'text-lg sm:text-xl font-medium',
+  subtitle: 'text-base sm:text-lg font-medium',
+  body: 'text-sm sm:text-base font-normal',
+  small: 'text-xs sm:text-sm font-normal',
+};
+
+const colors = {
+  primary: 'bg-green-500 hover:bg-green-600 text-white',
+  secondary: 'bg-blue-500 hover:bg-blue-600 text-white',
+  accent: 'bg-amber-500 hover:bg-amber-600 text-white',
+  cardBg: 'bg-gray-800',
+  cardBorder: 'border border-gray-700',
+  cardBorderHighlight: 'border border-amber-500',
+  textPrimary: 'text-gray-100',
+  textSecondary: 'text-gray-300',
+  textMuted: 'text-gray-400',
+  chartBg: 'bg-transparent',
+  investmentCardBg: 'bg-gradient-to-br from-blue-600 to-blue-500',
+  withdrawalCardBg: 'bg-gradient-to-br from-green-600 to-green-500',
+  buttonBg: 'bg-gray-700',
+  buttonHover: 'hover:bg-gray-600',
+};
 
 const Home: React.FC = () => {
-  const { loading, error, currentPrice, exchangeRate, weeklyPrices, powerLawData, dailyPrices } = useBitcoinData();
+  const { loading, error, currentPrice, exchangeRate, weeklyPrices, powerLawData, dailyPrices, rSquared: dataRSquared } = useBitcoinData();
 
   const [rSquared, setRSquared] = useState<number>(0.9703);
 
   useEffect(() => {
-    if (weeklyPrices && weeklyPrices.length > 0) {
+    if (dataRSquared !== null) {
+      setRSquared(dataRSquared);
+    } else if (weeklyPrices && weeklyPrices.length > 0) {
       const calculatedRSquared = calculateRSquared(
-        weeklyPrices.map(item => [new Date(item.date).getTime(), item.price] as [number, number])
+        weeklyPrices.map((item: { date: string; price: number }) => [new Date(item.date).getTime(), item.price] as [number, number])
       );
       if (calculatedRSquared !== null) setRSquared(calculatedRSquared);
     }
-  }, [weeklyPrices]);
+  }, [weeklyPrices, dataRSquared]);
 
   const powerLawPosition = useMemo(() => {
     if (!currentPrice || !powerLawData || powerLawData.length === 0) return null;
@@ -54,7 +79,7 @@ const Home: React.FC = () => {
   const { medianPrice, supportPrice } = useMemo(() => {
     if (!powerLawData || powerLawData.length === 0) return { medianPrice: 0, supportPrice: 0 };
     const now = Date.now();
-    const closestPoint = powerLawData.reduce((closest, current) =>
+    const closestPoint = powerLawData.reduce((closest: ChartDataPoint, current: ChartDataPoint) =>
       Math.abs(current.date - now) < Math.abs(closest.date - now) ? current : closest
     );
     return { medianPrice: closestPoint.medianModel, supportPrice: closestPoint.supportModel };
@@ -65,7 +90,6 @@ const Home: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen">
       <div className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-0 bg-transparent text-gray-100 space-y-6">
-        {/* シミュレーターへの導線（省略、変更なし） */}
         <div className="text-center mt-10">
           <p className="text-lg text-gray-300 mb-6">長期ビットコイン投資による資産形成を考える</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">

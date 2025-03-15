@@ -2,11 +2,10 @@ import React, { useState, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { ChevronDown, ChevronUp, Settings, HelpCircle } from "lucide-react";
 import { formatYen, formatBTC, formatPercentage } from '../../utils/formatters';
-import { DEFAULTS, CURRENT_YEAR, PriceModel } from '../../utils/constants';
-import { useWithdrawalSimulation, WithdrawalInputs } from '../../hooks/useWithdrawalSimulation';
+import { CURRENT_YEAR, PriceModel } from '../../utils/constants';
+import { useWithdrawalSimulation as useWithdrawalSimulationHook, WithdrawalInputs, WithdrawalSimulationResult } from '../../hooks/useWithdrawalSimulation';
 import LoadingSpinner from '../ui/LoadingSpinner';
 
-// Home.tsx から借用したスタイル
 const typography = {
     h1: 'text-3xl sm:text-4xl font-extrabold tracking-tight',
     h2: 'text-xl sm:text-2xl font-semibold tracking-tight',
@@ -26,7 +25,6 @@ const colors = {
     textMuted: 'text-gray-400',
 };
 
-// ツールチップアイコンコンポーネント
 const TooltipIcon: React.FC<{ content: React.ReactNode }> = ({ content }) => (
     <div className="group relative inline-block ml-2">
         <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-300 cursor-help transition-colors duration-200" />
@@ -36,7 +34,6 @@ const TooltipIcon: React.FC<{ content: React.ReactNode }> = ({ content }) => (
     </div>
 );
 
-// インプットフィールドコンポーネント
 const InputField: React.FC<{
     label: string;
     tooltip?: React.ReactNode;
@@ -69,25 +66,25 @@ const TOOLTIPS = {
     ),
 };
 
-const WithdrawalSimulator: React.FC = () => {
-    const [initialBTC, setInitialBTC] = useState("");
-    const [startYear, setStartYear] = useState("2025");
-    const [priceModel, setPriceModel] = useState<PriceModel>(PriceModel.STANDARD);
-    const [withdrawalType, setWithdrawalType] = useState<'fixed' | 'percentage'>("fixed");
-    const [withdrawalAmount, setWithdrawalAmount] = useState("");
-    const [withdrawalRate, setWithdrawalRate] = useState("4");
-    const [showSecondPhase, setShowSecondPhase] = useState(false);
-    const [secondPhaseYear, setSecondPhaseYear] = useState("2030");
-    const [secondPhaseType, setSecondPhaseType] = useState<'fixed' | 'percentage'>("fixed");
-    const [secondPhaseAmount, setSecondPhaseAmount] = useState("");
-    const [secondPhaseRate, setSecondPhaseRate] = useState("4");
+const WithdrawalSimulator: React.FC<WithdrawalInputs> = (props) => {
+    const [initialBTC, setInitialBTC] = useState(props.initialBTC);
+    const [startYear, setStartYear] = useState(props.startYear);
+    const [priceModel, setPriceModel] = useState<PriceModel>(props.priceModel);
+    const [withdrawalType, setWithdrawalType] = useState<'fixed' | 'percentage'>(props.withdrawalType);
+    const [withdrawalAmount, setWithdrawalAmount] = useState(props.withdrawalAmount);
+    const [withdrawalRate, setWithdrawalRate] = useState(props.withdrawalRate);
+    const [showSecondPhase, setShowSecondPhase] = useState(props.showSecondPhase);
+    const [secondPhaseYear, setSecondPhaseYear] = useState(props.secondPhaseYear);
+    const [secondPhaseType, setSecondPhaseType] = useState<'fixed' | 'percentage'>(props.secondPhaseType);
+    const [secondPhaseAmount, setSecondPhaseAmount] = useState(props.secondPhaseAmount);
+    const [secondPhaseRate, setSecondPhaseRate] = useState(props.secondPhaseRate);
     const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
-    const [taxRate, setTaxRate] = useState(DEFAULTS.TAX_RATE.toString());
-    const [exchangeRate, setExchangeRate] = useState(DEFAULTS.EXCHANGE_RATE.toString());
-    const [inflationRate, setInflationRate] = useState(DEFAULTS.INFLATION_RATE.toString());
+    const [taxRate, setTaxRate] = useState(props.taxRate);
+    const [exchangeRate, setExchangeRate] = useState(props.exchangeRate);
+    const [inflationRate, setInflationRate] = useState(props.inflationRate);
     const [isCalculating, setIsCalculating] = useState(false);
 
-    const { results, errors, simulate } = useWithdrawalSimulation();
+    const { results, errors, simulate } = useWithdrawalSimulationHook();
 
     const runSimulation = () => {
         setIsCalculating(true);
@@ -115,7 +112,7 @@ const WithdrawalSimulator: React.FC = () => {
 
     const chartData = useMemo(() => {
         if (results.length > 0) {
-            return results.map(result => ({
+            return results.map((result: WithdrawalSimulationResult) => ({
                 year: result.year,
                 btcHeld: result.remainingBTC,
                 totalValue: result.totalValue,
@@ -162,7 +159,7 @@ const WithdrawalSimulator: React.FC = () => {
                         <InputField label="価格予測モデル" tooltip={TOOLTIPS.priceModel}>
                             <select
                                 value={priceModel}
-                                onChange={(e) => setPriceModel(e.target.value as 'standard' | 'conservative')}
+                                onChange={(e) => setPriceModel(e.target.value as PriceModel)}
                                 className="w-full bg-gray-700 p-2 rounded-md text-gray-100 focus:ring-2 focus:ring-amber-500 focus:outline-none transition-all duration-200"
                             >
                                 <option value={PriceModel.STANDARD}>標準モデル</option>
@@ -172,7 +169,7 @@ const WithdrawalSimulator: React.FC = () => {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <InputField label="取り崩し方法" error={errors.withdrawalType}>
+                        <InputField label="取り崩し方法" error={errors.withdrawalRate}>
                             <select
                                 value={withdrawalType}
                                 onChange={(e) => setWithdrawalType(e.target.value as 'fixed' | 'percentage')}
@@ -228,7 +225,7 @@ const WithdrawalSimulator: React.FC = () => {
                                     </select>
                                 </InputField>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <InputField label="2段階目取り崩し方法" error={errors.secondPhaseType}>
+                                    <InputField label="2段階目取り崩し方法" error={errors.secondPhaseYear}>
                                         <select
                                             value={secondPhaseType}
                                             onChange={(e) => setSecondPhaseType(e.target.value as 'fixed' | 'percentage')}
@@ -403,7 +400,6 @@ const WithdrawalSimulator: React.FC = () => {
                             </ResponsiveContainer>
                         </div>
 
-                        {/* モバイル向けカード表示 */}
                         <div className={`block md:hidden ${colors.cardBg} p-4 rounded-xl shadow-md space-y-3`}>
                             <h3 className={`${typography.h3} ${colors.textPrimary} mb-2`}>ハイライト</h3>
                             <div className="bg-gray-700 p-3 rounded-md">
@@ -425,7 +421,7 @@ const WithdrawalSimulator: React.FC = () => {
                                 </div>
                             </div>
                             {(() => {
-                                const zeroIndex = results.findIndex(r => r.remainingBTC <= 0);
+                                const zeroIndex = results.findIndex((r: WithdrawalSimulationResult) => r.remainingBTC <= 0);
                                 const zeroYear = zeroIndex !== -1 ? results[zeroIndex].year : null;
                                 return (
                                     <div className="bg-gray-700 p-3 rounded-md">
@@ -442,14 +438,13 @@ const WithdrawalSimulator: React.FC = () => {
                                 <div className={`${typography.small} ${colors.textMuted}`}>5年後の資産評価額</div>
                                 <div className={`${typography.body} ${colors.textPrimary}`}>
                                     {formatYen(
-                                        results.find(r => r.year === CURRENT_YEAR + 5)?.totalValue || 0,
+                                        results.find((r: WithdrawalSimulationResult) => r.year === CURRENT_YEAR + 5)?.totalValue || 0,
                                         2
                                     )}
                                 </div>
                             </div>
                         </div>
 
-                        {/* デスクトップ向け表形式表示 */}
                         <div className={`hidden md:block ${colors.cardBg} p-6 rounded-xl shadow-md ${colors.cardBorder}`}>
                             <div className="flex justify-between mb-4">
                                 <h3 className={`${typography.h3} ${colors.textPrimary}`}>シミュレーション結果</h3>
@@ -471,7 +466,7 @@ const WithdrawalSimulator: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-700">
-                                        {results.map((result) => (
+                                        {results.map((result: WithdrawalSimulationResult) => (
                                             <tr key={result.year} className={result.year % 2 === 0 ? "bg-gray-800" : "bg-gray-750 hover:bg-gray-700 transition-colors duration-200"}>
                                                 <td className={`${typography.body} px-4 py-2 whitespace-nowrap ${colors.textPrimary}`}>{result.year}</td>
                                                 <td className={`${typography.body} px-4 py-2 whitespace-nowrap ${colors.textPrimary}`}>{formatYen(result.btcPrice, 2)}</td>

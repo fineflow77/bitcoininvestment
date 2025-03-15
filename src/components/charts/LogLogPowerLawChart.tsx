@@ -1,6 +1,6 @@
 import React from 'react';
-import PowerLawChart, { PowerLawChartProps } from './PowerLawChart';
-import { ChartDataPoint } from '../../types'; // 型インポート
+import PowerLawChart from './PowerLawChart';
+import { PowerLawChartProps } from '../../types';
 
 const LogLogPowerLawChart: React.FC<PowerLawChartProps> = ({
     rSquared,

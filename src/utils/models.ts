@@ -1,19 +1,14 @@
+import { PriceModelType } from '../types';
 import { getDaysSinceGenesis } from './dateUtils';
 
-// 型定義
-type PriceModelType = 'STANDARD' | 'ALTERNATIVE' | 'conservative' | 'standard';
-
-export const log10 = (value: number): number => Math.log10(Math.max(0.0000001, value));
-export const fromLog10 = (logValue: number): number => Math.pow(10, logValue);
-
-export const btcPriceMedian = (days: number, model: PriceModelType = 'STANDARD'): number => {
-    const medianModelLog = -17.01593313 + 5.84509376 * Math.log10(days);
+export const btcPriceMedian = (days: number, model: PriceModelType = 'standard'): number => {
+    let medianModelLog: number;
+    if (model === 'standard') {
+        medianModelLog = -17.01593313 + 5.84509376 * Math.log10(days);
+    } else {
+        medianModelLog = -17.5 + 5.5 * Math.log10(days);
+    }
     return Math.pow(10, medianModelLog);
-};
-
-export const btcPriceSupport = (days: number): number => {
-    const supportModelLog = -17.668 + 5.926 * Math.log10(days);
-    return Math.pow(10, supportModelLog);
 };
 
 export const calculateRSquared = (data: [number, number][]): number | null => {
