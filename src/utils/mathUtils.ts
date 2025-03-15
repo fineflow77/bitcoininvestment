@@ -2,24 +2,24 @@ import { getDaysSinceGenesis } from './dateUtils';
 
 /**
  * log10 を計算する（0以下の値も扱える）
- * @param {number} value - 対数を計算する値
- * @returns {number} log10(value)
+ * @param value - 対数を計算する値（0以下の場合最小値 0.0000001 を使用）
+ * @returns 計算された log10 値
  */
-export const log10 = (value) => Math.log10(Math.max(0.0000001, value));
+export const log10 = (value: number): number => Math.log10(Math.max(0.0000001, value));
 
 /**
  * 10の冪乗を計算する（fromLog10(log10(x)) = x）
- * @param {number} logValue - 対数値
- * @returns {number} 10^logValue
+ * @param logValue - 対数値
+ * @returns 10^logValue の結果
  */
-export const fromLog10 = (logValue) => Math.pow(10, logValue);
+export const fromLog10 = (logValue: number): number => Math.pow(10, logValue);
 
 /**
  * ビットコインのパワーロー決定係数を計算する
- * @param {Array} data - 価格データ配列 [[timestamp, price], ...]
- * @returns {number} R^2値
+ * @param data - 価格データ配列 [[timestamp, price], ...]（timestamp: number, price: number のタプル）
+ * @returns R^2値（計算不能の場合は null）
  */
-export const calculateRSquared = (data) => {
+export const calculateRSquared = (data: [number, number][]): number | null => {
     if (!data || data.length === 0) return null;
 
     let sumX = 0;
@@ -53,12 +53,12 @@ export const calculateRSquared = (data) => {
 
 /**
  * パワーロー内位置（分位）を計算
- * @param {number} price - 現在価格
- * @param {number} medianPrice - 中央価格
- * @param {number} supportPrice - 下限価格
- * @returns {number} 相対位置（0=下限、100=中央）
+ * @param price - 現在価格
+ * @param medianPrice - 中央価格
+ * @param supportPrice - 下限価格
+ * @returns 相対位置（0=下限、100=中央、100以上=中央超え）または null（入力が不正な場合）
  */
-export const calculatePowerLawPosition = (price, medianPrice, supportPrice) => {
+export const calculatePowerLawPosition = (price: number, medianPrice: number, supportPrice: number): number | null => {
     if (!price || !medianPrice || !supportPrice) return null;
 
     // 対数スケールでの計算（より正確）
@@ -78,10 +78,10 @@ export const calculatePowerLawPosition = (price, medianPrice, supportPrice) => {
 
 /**
  * パワーロー位置に基づくラベルを返す
- * @param {number} position - 相対位置（0-100+）
- * @returns {string} 位置の説明
+ * @param position - 相対位置（0-100+）または null/undefined
+ * @returns 位置の説明
  */
-export const getPowerLawPositionLabel = (position) => {
+export const getPowerLawPositionLabel = (position: number | null | undefined): string => {
     if (position === null || position === undefined) return '計算不可';
 
     if (position < 0) return '非常に割安';
@@ -95,10 +95,10 @@ export const getPowerLawPositionLabel = (position) => {
 
 /**
  * パワーロー位置に基づく色を返す
- * @param {number} position - 相対位置（0-100+）
- * @returns {string} 色名
+ * @param position - 相対位置（0-100+）または null/undefined
+ * @returns 色名（CSS 形式）
  */
-export const getPowerLawPositionColor = (position) => {
+export const getPowerLawPositionColor = (position: number | null | undefined): string => {
     if (position === null || position === undefined) return '#888888';
 
     if (position < 0) return '#1565C0'; // 濃い青
@@ -111,12 +111,12 @@ export const getPowerLawPositionColor = (position) => {
 };
 
 /**
- * パーセント形式フォーマット
- * @param {number} value - フォーマットする値
- * @param {number} decimals - 小数点以下の桁数
- * @returns {string} フォーマットされた文字列
+ * パーセント形式でフォーマット
+ * @param value - フォーマットする値
+ * @param decimals - 小数点以下の桁数（デフォルト: 1）
+ * @returns フォーマットされた文字列（例: '+12.3%'）
  */
-export const formatPercentage = (value, decimals = 1) => {
+export const formatPercentage = (value: number | null, decimals: number = 1): string => {
     if (value === null || isNaN(value)) return '-';
     return `${value >= 0 ? '+' : ''}${value.toFixed(decimals)}%`;
 };
