@@ -1,6 +1,6 @@
 import React from 'react';
 import PowerLawChart from './PowerLawChart';
-import { PowerLawChartProps } from '../../types';
+import { PowerLawChartProps } from '../../types/index';
 
 interface PowerLawChartWrapperProps extends PowerLawChartProps {
     chartTitle?: string;

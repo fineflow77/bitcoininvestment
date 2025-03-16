@@ -1,3 +1,4 @@
+// src/types/index.ts
 export type PriceModelType = 'standard' | 'conservative';
 
 export interface ChartDataPoint {
@@ -29,4 +30,37 @@ export interface PriceResponse {
     };
     timestamp: string;
     source?: string;
+}
+
+export interface PowerLawChartProps {
+    exchangeRate?: number;
+    rSquared: number | null;
+    chartData: ChartDataPoint[];
+    currentPrice?: number;
+    height?: number;
+    showPositionInfo?: boolean;
+    isZoomed?: boolean;
+    powerLawPosition?: number | null;
+    xAxisScale?: 'linear' | 'log';
+    yAxisScale?: 'linear' | 'log';
+    showRSquared?: boolean;
+    chartTitle?: string;
+}
+
+export interface TooltipContentProps {
+    active?: boolean;
+    payload?: any[];
+    label?: number;
+    exchangeRate: number;
+    currentPrice?: number;
+    powerLawPosition?: number | null;
+}
+
+export interface ZoomState {
+    start: number;
+    end: number;
+    originalDomain: [number, number];
+    isZooming: boolean;
+    refAreaLeft: number | null;
+    refAreaRight: number | null;
 }

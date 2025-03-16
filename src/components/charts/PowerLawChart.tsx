@@ -1,51 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceArea, ReferenceLine, Label } from 'recharts';
 import { formatCurrency, formatPercentage } from '../../utils/formatters';
 import { HALVING_EVENTS } from '../../utils/constants';
 import { getPowerLawPositionLabel, calculatePowerLawPosition } from '../../utils/models';
 import { getDaysSinceGenesis } from '../../utils/dateUtils';
-
-interface ChartDataPoint {
-    date: number;
-    price: number | null;
-    medianModel: number;
-    supportModel: number;
-    isFuture: boolean;
-    daysSinceGenesis: number;
-}
-
-interface PowerLawChartProps {
-    exchangeRate?: number;
-    rSquared: number | null;
-    chartData: ChartDataPoint[];
-    currentPrice?: number;
-    height?: number;
-    showPositionInfo?: boolean;
-    isZoomed?: boolean;
-    powerLawPosition?: number | null;
-    xAxisScale?: 'linear' | 'log';
-    yAxisScale?: 'linear' | 'log';
-    showRSquared?: boolean;
-    chartTitle?: string;
-}
-
-interface TooltipContentProps {
-    active?: boolean;
-    payload?: any[];
-    label?: number;
-    exchangeRate: number;
-    currentPrice?: number;
-    powerLawPosition?: number | null;
-}
-
-interface ZoomState {
-    start: number;
-    end: number;
-    originalDomain: [number, number];
-    isZooming: boolean;
-    refAreaLeft: number | null;
-    refAreaRight: number | null;
-}
+import { PowerLawChartProps, TooltipContentProps, ZoomState } from '../../types/index';
 
 const COLORS = {
     price: '#FF9500',
@@ -68,7 +27,7 @@ const CHART_CONFIG = {
     PRICE_LINE_WIDTH: 1.5,
     MODEL_LINE_WIDTH: 2,
     REFERENCE_LINE_WIDTH: 2,
-    MARGIN: { top: 40, right: 20, left: 50, bottom: 20 }, // グラフ周りのスペースを詰める
+    MARGIN: { top: 40, right: 20, left: 50, bottom: 20 },
     ZOOM_FACTOR: 0.2,
     MIN_ZOOM_AREA: 86400000,
 };
@@ -94,7 +53,7 @@ const TooltipContent: React.FC<TooltipContentProps> = ({
 }) => {
     if (!active || !payload || !payload.length || !label) return null;
 
-    const data = payload[0].payload as ChartDataPoint;
+    const data = payload[0].payload;
     const date = new Date(data.date).toLocaleDateString('ja-JP', {
         year: 'numeric',
         month: 'long',
@@ -103,9 +62,9 @@ const TooltipContent: React.FC<TooltipContentProps> = ({
     const priceUSD = data.price !== null ? data.price : (data.isFuture ? null : currentPrice);
     const priceJPY = priceUSD ? priceUSD * exchangeRate : null;
     const isCurrentData = !data.isFuture && data.price !== null;
-    let pointPosition = null;
+    let pointPosition: number | null = null;
 
-    if (isCurrentData && priceUSD) {
+    if (isCurrentData && priceUSD !== null && priceUSD !== undefined) {
         pointPosition = calculatePowerLawPosition(priceUSD, data.medianModel, data.supportModel);
     }
     const isCurrentTimePoint = Math.abs(data.date - new Date().getTime()) < 24 * 60 * 60 * 1000;
@@ -162,7 +121,6 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
     chartData = [],
     currentPrice,
     height = 400,
-    showPositionInfo = true,
     isZoomed = false,
     powerLawPosition = null,
     xAxisScale = 'log',
@@ -178,8 +136,6 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
         refAreaLeft: null,
         refAreaRight: null,
     });
-
-    const chartRef = useRef(null);
 
     const nowTimestamp = new Date().getTime();
     const chartEndTimestamp = new Date('2040-12-31').getTime();

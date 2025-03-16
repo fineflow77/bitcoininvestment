@@ -4,11 +4,7 @@ import { TrendingUp, Info, ArrowUpRight } from 'lucide-react';
 import { useBitcoinData } from '../hooks/useBitcoinData';
 import PowerLawChart from '../components/charts/PowerLawChart';
 import { formatCurrency, formatPercentage } from '../utils/formatters';
-import {
-  calculatePowerLawPosition,
-  getPowerLawPositionLabel,
-  calculateRSquared,
-} from '../utils/models';
+import { calculatePowerLawPosition, getPowerLawPositionLabel, calculateRSquared } from '../utils/models';
 import DataContainer from '../components/ui/DataContainer';
 import { getDaysSinceGenesis } from '../utils/dateUtils';
 import { ChartLineUp } from 'phosphor-react';
@@ -78,11 +74,11 @@ const Home: React.FC = () => {
   const powerLawPosition = useMemo(() => {
     if (!currentPrice || !powerLawData || powerLawData.length === 0) return null;
     const latestNonFutureData = [...powerLawData]
-      .filter(item => !item.isFuture && item.price !== null)
+      .filter((item) => !item.isFuture && item.price !== null)
       .sort((a, b) => b.date - a.date)[0];
     if (!latestNonFutureData) return null;
 
-    return calculatePowerLawPosition(currentPrice.prices.usd, latestNonFutureData.medianModel);
+    return calculatePowerLawPosition(currentPrice.prices.usd, latestNonFutureData.medianModel, latestNonFutureData.supportModel);
   }, [currentPrice, powerLawData]);
 
   const priceChangePercentage = useMemo(() => {

@@ -1,55 +1,25 @@
 import { useState, useEffect, useCallback } from 'react';
 import { PriceModel, CHART_TIME_RANGE, TIME_INTERVALS } from '../utils/constants';
 import { calculateRSquared } from '../utils/models';
+import { ChartDataPoint, PriceResponse } from '../types/index';
 
 const getDaysSinceGenesis = (date: Date): number => {
-    const genesisDate = new Date('2009-01-03'); // ジェネシスブロック
+    const genesisDate = new Date('2009-01-03');
     return Math.floor((date.getTime() - genesisDate.getTime()) / TIME_INTERVALS.DAY_MS);
 };
 
-// 中央値モデル（提供された式）
 const btcPriceMedian = (days: number, model: PriceModel = PriceModel.STANDARD): number => {
     const price = Math.pow(10, -17.01593313 + 5.84509376 * Math.log10(days));
     console.log(`btcPriceMedian: Days=${days}, Model=${model}, Price=${price.toFixed(2)}`);
     return price;
 };
 
-// 下限値モデル（提供された式を対数形式で計算）
 const btcPriceSupport = (days: number): number => {
-    const logPrice = -17.668 + 5.926 * Math.log10(days); // 対数形式で計算
+    const logPrice = -17.668 + 5.926 * Math.log10(days);
     const price = Math.pow(10, logPrice);
     console.log(`btcPriceSupport: Days=${days}, Support=${price.toFixed(2)}`);
     return price;
 };
-
-interface PriceResponse {
-    prices: { usd: number; jpy: number; };
-    timestamp: string;
-    source?: string;
-}
-
-interface ChartDataPoint {
-    date: number;
-    price: number | null;
-    medianModel: number;
-    supportModel: number;
-    isFuture: boolean;
-    daysSinceGenesis: number;
-}
-
-interface BitcoinData {
-    loading: boolean;
-    error: Error | null;
-    currentPrice: PriceResponse | null;
-    dailyPrices: Array<{ date: string; price: number }>;
-    weeklyPrices: Array<{ date: string; powerLawPosition: number; price: number }>;
-    linearLogData: ChartDataPoint[];
-    logLogData: ChartDataPoint[];
-    exchangeRate: number;
-    rSquared: number | null;
-    dataSources: { currentPrice?: string; dailyPrices?: string; weeklyPrices?: string; };
-    todayPowerLawPrice?: { median: number; support: number };
-}
 
 const fetchBinanceCurrentPrice = async (): Promise<PriceResponse> => {
     try {
@@ -156,7 +126,6 @@ const generateChartData = (
     const now = new Date();
     const nowTimestamp = now.getTime();
     const startTimestamp = CHART_TIME_RANGE.DISPLAY_START_DATE.getTime();
-    const simEndTimestamp = new Date('2050-12-31').getTime();
     const chartEndTimestamp = new Date('2040-12-31').getTime();
     const cutoffTimestamp = new Date('2023-12-31').getTime();
 
@@ -168,7 +137,6 @@ const generateChartData = (
     console.log('Daily Data Length:', dailyData.length);
     console.log('Current Price:', currentPrice);
 
-    // 週次データ
     weeklyData.forEach(item => {
         const date = new Date(item.date);
         const timestamp = date.getTime();
@@ -187,7 +155,6 @@ const generateChartData = (
         }
     });
 
-    // 日次データ
     dailyData.forEach(item => {
         const date = new Date(item.date);
         const timestamp = date.getTime();
@@ -206,7 +173,6 @@ const generateChartData = (
         }
     });
 
-    // 現在の価格と本日のパワーロー価格
     let todayPowerLawPrice: { median: number; support: number } | undefined;
     if (currentPrice) {
         const days = getDaysSinceGenesis(now);
@@ -230,7 +196,6 @@ const generateChartData = (
         todayPowerLawPrice = { median, support };
     }
 
-    // 未来のデータポイントを補完
     const dayMs = TIME_INTERVALS.DAY_MS;
     const startDays = getDaysSinceGenesis(CHART_TIME_RANGE.DISPLAY_START_DATE);
     const simEndDays = getDaysSinceGenesis(new Date('2050-12-31'));
@@ -256,7 +221,7 @@ const generateChartData = (
 
     const rSquaredInput = linearLogData
         .filter(d => !d.isFuture && d.price !== null)
-        .map(d => [Math.log(d.daysSinceGenesis), Math.log(d.price || 1)]);
+        .map(d => [Math.log(d.daysSinceGenesis), Math.log(d.price || 1)] as [number, number]);
     const rSquared = calculateRSquared(rSquaredInput);
 
     console.log('Generated LinearLogData Length:', linearLogData.length);
@@ -266,6 +231,20 @@ const generateChartData = (
 
     return { linearLogData, logLogData, rSquared, todayPowerLawPrice };
 };
+
+interface BitcoinData {
+    loading: boolean;
+    error: Error | null;
+    currentPrice: PriceResponse | null;
+    dailyPrices: Array<{ date: string; price: number }>;
+    weeklyPrices: Array<{ date: string; powerLawPosition: number; price: number }>;
+    linearLogData: ChartDataPoint[];
+    logLogData: ChartDataPoint[];
+    exchangeRate: number;
+    rSquared: number | null;
+    dataSources: { currentPrice?: string; dailyPrices?: string; weeklyPrices?: string; };
+    todayPowerLawPrice?: { median: number; support: number };
+}
 
 export const useBitcoinData = (): BitcoinData => {
     const [state, setState] = useState<BitcoinData>({
@@ -343,4 +322,3 @@ export const useBitcoinData = (): BitcoinData => {
 
     return state;
 };
-
