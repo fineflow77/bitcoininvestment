@@ -1,6 +1,16 @@
 import React from 'react';
 import PowerLawChart from './PowerLawChart';
-import { PowerLawChartProps } from '../../types/index'; // パス修正
+
+// 型定義を直接埋め込む
+interface PowerLawChartProps {
+    rSquared?: number | null;
+    chartData: Array<{ date: number; price: number | null; medianModel: number; supportModel: number; isFuture: boolean; daysSinceGenesis: number }>;
+    exchangeRate: number;
+    currentPrice: number;
+    height?: number;
+    isZoomed?: boolean;
+    powerLawPosition?: number | null;
+}
 
 interface PowerLawChartWrapperProps extends PowerLawChartProps {
     chartTitle?: string;
@@ -33,3 +43,4 @@ const PowerLawChartWrapper: React.FC<PowerLawChartWrapperProps> = ({
 };
 
 export default PowerLawChartWrapper;
+

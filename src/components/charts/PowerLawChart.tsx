@@ -4,7 +4,39 @@ import { formatCurrency, formatPercentage } from '../../utils/formatters';
 import { HALVING_EVENTS } from '../../utils/constants';
 import { getPowerLawPositionLabel, calculatePowerLawPosition } from '../../utils/models';
 import { getDaysSinceGenesis } from '../../utils/dateUtils';
-import { PowerLawChartProps, TooltipContentProps, ZoomState } from '../../types/index';
+
+// 型定義を直接埋め込む
+interface PowerLawChartProps {
+    exchangeRate?: number;
+    rSquared?: number | null; // undefined を null に統一
+    chartData: Array<{ date: number; price: number | null; medianModel: number; supportModel: number; isFuture: boolean; daysSinceGenesis: number }>;
+    currentPrice: number;
+    height?: number;
+    isZoomed?: boolean;
+    powerLawPosition?: number | null;
+    xAxisScale?: 'log' | 'linear';
+    yAxisScale?: 'log' | 'linear';
+    showRSquared?: boolean;
+    chartTitle?: string;
+}
+
+interface TooltipContentProps {
+    active?: boolean;
+    payload?: Array<{ payload: any }>;
+    label?: string;
+    exchangeRate: number;
+    currentPrice: number;
+    powerLawPosition?: number | null;
+}
+
+interface ZoomState {
+    start: number;
+    end: number;
+    originalDomain: [number, number];
+    isZooming: boolean;
+    refAreaLeft: number | null;
+    refAreaRight: number | null;
+}
 
 const COLORS = {
     price: '#FF9500',
@@ -13,13 +45,10 @@ const COLORS = {
     grid: '#5A5A6A',
     halving: 'rgba(255, 255, 255, 0.25)',
     tooltip: { bg: 'rgba(26, 32, 44, 0.95)', border: 'rgba(82, 82, 91, 0.8)' },
-    infoBg: 'rgba(26, 32, 44, 0.75)',
-    introBg: 'rgba(0, 0, 0, 0.5)',
-    chartBg: 'transparent',
-    plotAreaBg: '#000000',
     legendText: '#e2e8f0',
     priceArea: 'rgba(255, 149, 0, 0.1)',
     supportArea: 'rgba(229, 115, 115, 0.1)',
+    plotAreaBg: '#000000',
 };
 
 const CHART_CONFIG = {
@@ -32,8 +61,8 @@ const CHART_CONFIG = {
     MIN_ZOOM_AREA: 86400000,
 };
 
-const getPowerLawPositionColorSoft = (position: number | null | undefined): string => {
-    if (position === null || position === undefined) return '#888888';
+const getPowerLawPositionColorSoft = (position: number | null): string => {
+    if (position === null) return '#888888';
     if (position < -50) return '#64B5F6';
     if (position < -30) return '#90CAF9';
     if (position < -10) return '#81C784';
@@ -64,12 +93,12 @@ const TooltipContent: React.FC<TooltipContentProps> = ({
     const isCurrentData = !data.isFuture && data.price !== null;
     let pointPosition: number | null = null;
 
-    if (isCurrentData && priceUSD !== null && priceUSD !== undefined) {
+    if (isCurrentData && priceUSD !== null) {
         pointPosition = calculatePowerLawPosition(priceUSD, data.medianModel, data.supportModel);
     }
     const isCurrentTimePoint = Math.abs(data.date - new Date().getTime()) < 24 * 60 * 60 * 1000;
-    if (isCurrentTimePoint && powerLawPosition !== null && powerLawPosition !== undefined) {
-        pointPosition = powerLawPosition;
+    if (isCurrentTimePoint && powerLawPosition !== undefined) {
+        pointPosition = powerLawPosition ?? null; // undefined を null に変換
     }
 
     return (
@@ -235,29 +264,19 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
     }, []);
 
     if (!chartData.length) {
-        return (
-            <div className="text-gray-400 text-center p-2 bg-gray-800 bg-opacity-50 rounded-lg" aria-label="データがありません">
-                データがありません
-            </div>
-        );
+        return <div className="text-gray-400 text-center p-2 bg-gray-800 bg-opacity-50 rounded-lg">データがありません</div>;
     }
 
     const hasPastData = chartData.some((item) => !item.isFuture && item.price !== null);
     if (!hasPastData) {
-        return (
-            <div className="text-gray-400 text-center p-2 bg-gray-800 bg-opacity-50 rounded-lg" aria-label="過去の価格データがロードされていません">
-                過去の価格データがロードされていません
-            </div>
-        );
+        return <div className="text-gray-400 text-center p-2 bg-gray-800 bg-opacity-50 rounded-lg">過去の価格データがロードされていません</div>;
     }
 
     const currentDomain = [zoomState.start || domain[0], zoomState.end || domain[1]];
 
     return (
-        <div className="bg-transparent relative rounded-lg" style={{ backgroundColor: 'transparent' }}>
-            {chartTitle && (
-                <h2 className="text-center text-lg font-medium text-amber-400 mb-2">{chartTitle}</h2>
-            )}
+        <div className="bg-transparent relative rounded-lg">
+            {chartTitle && <h2 className="text-center text-lg font-medium text-amber-400 mb-2">{chartTitle}</h2>}
             <div className="absolute top-1 right-2 z-10">
                 <div className="bg-gray-800 bg-opacity-90 rounded-lg p-1 flex flex-col sm:flex-row items-center space-y-1 sm:space-y-0 sm:space-x-1 shadow-md border border-gray-700">
                     <button onClick={handleZoomIn} className="bg-gray-700 text-white px-2 py-1 text-xs sm:text-sm rounded sm:rounded-l hover:bg-gray-600">+ 拡大</button>
@@ -289,11 +308,7 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
                         wrapperStyle={{ color: COLORS.legendText, fontSize: '12px', padding: '5px 10px', bottom: 20, right: 20, position: 'absolute' }}
                         formatter={(value) => {
                             const color = value === 'price' ? COLORS.price : value === 'medianModel' ? COLORS.median : COLORS.support;
-                            return (
-                                <span style={{ color, marginRight: '15px', fontWeight: 500 }}>
-                                    {value === 'price' ? '実際価格' : value === 'medianModel' ? '中央価格 (予測)' : '下限価格 (予測)'}
-                                </span>
-                            );
+                            return <span style={{ color, marginRight: '15px', fontWeight: 500 }}>{value === 'price' ? '実際価格' : value === 'medianModel' ? '中央価格 (予測)' : '下限価格 (予測)'}</span>;
                         }}
                     />
                     {HALVING_EVENTS.map((event, index) => {
@@ -397,7 +412,7 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
                     />
                 </LineChart>
             </ResponsiveContainer>
-            {showRSquared && rSquared !== null && (
+            {showRSquared && rSquared !== null && rSquared !== undefined && ( // undefined チェックを追加
                 <div className="absolute top-1 left-2 bg-gray-800 bg-opacity-90 text-white rounded-lg p-1 shadow-lg text-xs sm:text-sm">
                     <span className="font-medium">決定係数 (R²): </span>
                     <span className="font-bold text-amber-400">{rSquared.toFixed(4)}</span>

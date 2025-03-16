@@ -9,8 +9,8 @@ import DataContainer from '../components/ui/DataContainer';
 import { getDaysSinceGenesis } from '../utils/dateUtils';
 import { ChartLineUp } from 'phosphor-react';
 
-const getPowerLawPositionColorSoft = (position: number | null | undefined): string => {
-  if (position === null || position === undefined) return '#888888';
+const getPowerLawPositionColorSoft = (position: number | null): string => {
+  if (position === null) return '#888888';
   if (position < -50) return '#64B5F6';
   if (position < -30) return '#90CAF9';
   if (position < -10) return '#81C784';

@@ -1,7 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import { PriceModel, CHART_TIME_RANGE, TIME_INTERVALS } from '../utils/constants';
 import { calculateRSquared } from '../utils/models';
-import { ChartDataPoint, PriceResponse } from '../types/index';
+
+// 型定義を直接埋め込む
+interface ChartDataPoint {
+    date: number;
+    price: number | null;
+    medianModel: number;
+    supportModel: number;
+    isFuture: boolean;
+    daysSinceGenesis: number;
+}
+
+interface PriceResponse {
+    prices: { usd: number; jpy: number };
+    timestamp: string;
+    source: string;
+}
 
 const getDaysSinceGenesis = (date: Date): number => {
     const genesisDate = new Date('2009-01-03');
@@ -132,11 +147,6 @@ const generateChartData = (
     const allData: ChartDataPoint[] = [];
     const dataMap = new Map<number, ChartDataPoint>();
 
-    console.log('Generating Chart Data...');
-    console.log('Weekly Data Length:', weeklyData.length);
-    console.log('Daily Data Length:', dailyData.length);
-    console.log('Current Price:', currentPrice);
-
     weeklyData.forEach(item => {
         const date = new Date(item.date);
         const timestamp = date.getTime();
@@ -219,15 +229,10 @@ const generateChartData = (
     const linearLogData = allData.filter(d => d.date <= chartEndTimestamp);
     const logLogData = allData.filter(d => d.date <= chartEndTimestamp);
 
-    const rSquaredInput = linearLogData
+    const rSquaredInput: [number, number][] = linearLogData
         .filter(d => !d.isFuture && d.price !== null)
-        .map(d => [Math.log(d.daysSinceGenesis), Math.log(d.price || 1)] as [number, number]);
+        .map(d => [Math.log(d.daysSinceGenesis), Math.log(d.price as number)] as [number, number]);
     const rSquared = calculateRSquared(rSquaredInput);
-
-    console.log('Generated LinearLogData Length:', linearLogData.length);
-    console.log('Generated LogLogData Length:', logLogData.length);
-    console.log('R-Squared:', rSquared);
-    console.log('Today Power Law Price:', todayPowerLawPrice);
 
     return { linearLogData, logLogData, rSquared, todayPowerLawPrice };
 };
@@ -242,7 +247,7 @@ interface BitcoinData {
     logLogData: ChartDataPoint[];
     exchangeRate: number;
     rSquared: number | null;
-    dataSources: { currentPrice?: string; dailyPrices?: string; weeklyPrices?: string; };
+    dataSources: { currentPrice?: string; dailyPrices?: string; weeklyPrices?: string };
     todayPowerLawPrice?: { median: number; support: number };
 }
 
@@ -264,7 +269,6 @@ export const useBitcoinData = (): BitcoinData => {
     const fetchData = useCallback(async () => {
         setState(prev => ({ ...prev, loading: true, error: null }));
         try {
-            console.log('データ取得開始');
             const weeklyPricesData = await fetchWeeklyJson();
             let currentPriceData: PriceResponse;
             let dailyPricesData: Array<{ date: string; price: number }>;
@@ -301,7 +305,6 @@ export const useBitcoinData = (): BitcoinData => {
                 },
                 todayPowerLawPrice,
             });
-            console.log('state更新完了:', { linearLogDataLength: linearLogData.length });
         } catch (error) {
             console.error('全体エラー:', error);
             setState(prev => ({
@@ -322,4 +325,3 @@ export const useBitcoinData = (): BitcoinData => {
 
     return state;
 };
-
