@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom'; // Router を削除し、Route, Routes のみをインポート
 import { useBitcoinData } from './hooks/useBitcoinData';
 import Home from './pages/Home';
 import PowerLawChartWrapper from './components/charts/PowerLawChartWrapper';
@@ -25,7 +25,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <Router>
+    <> {/* Router を削除し、代わりに React.Fragment (<></>) で囲む */}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route
@@ -35,7 +35,7 @@ const App: React.FC = () => {
               rSquared={rSquared}
               chartData={linearLogData}
               exchangeRate={exchangeRate}
-              currentPrice={currentPrice?.prices.usd ?? 0} // デフォルト値 0 を追加
+              currentPrice={currentPrice?.prices.usd ?? 0}
               height={600}
               isZoomed={false}
               powerLawPosition={null}
@@ -50,7 +50,7 @@ const App: React.FC = () => {
               rSquared={rSquared}
               chartData={logLogData}
               exchangeRate={exchangeRate}
-              currentPrice={currentPrice?.prices.usd ?? 0} // デフォルト値 0 を追加
+              currentPrice={currentPrice?.prices.usd ?? 0}
               height={600}
               isZoomed={false}
               powerLawPosition={null}
@@ -58,7 +58,7 @@ const App: React.FC = () => {
           }
         />
       </Routes>
-    </Router>
+    </>
   );
 };
 

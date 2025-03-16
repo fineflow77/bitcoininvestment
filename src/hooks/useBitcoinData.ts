@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { PriceModel, CHART_TIME_RANGE, TIME_INTERVALS } from '../utils/constants';
 import { calculateRSquared } from '../utils/models';
 
-// 型定義を直接埋め込む
 interface ChartDataPoint {
     date: number;
     price: number | null;
@@ -23,17 +22,14 @@ const getDaysSinceGenesis = (date: Date): number => {
     return Math.floor((date.getTime() - genesisDate.getTime()) / TIME_INTERVALS.DAY_MS);
 };
 
-const btcPriceMedian = (days: number, model: PriceModel = PriceModel.STANDARD): number => {
+const btcPriceMedian = (days: number): number => { // model 引数を削除
     const price = Math.pow(10, -17.01593313 + 5.84509376 * Math.log10(days));
-    console.log(`btcPriceMedian: Days=${days}, Model=${model}, Price=${price.toFixed(2)}`);
     return price;
 };
 
 const btcPriceSupport = (days: number): number => {
     const logPrice = -17.668 + 5.926 * Math.log10(days);
-    const price = Math.pow(10, logPrice);
-    console.log(`btcPriceSupport: Days=${days}, Support=${price.toFixed(2)}`);
-    return price;
+    return Math.pow(10, logPrice);
 };
 
 const fetchBinanceCurrentPrice = async (): Promise<PriceResponse> => {
@@ -42,13 +38,14 @@ const fetchBinanceCurrentPrice = async (): Promise<PriceResponse> => {
             fetch('/api/binance/api/v3/ticker/price?symbol=BTCUSDT'),
             fetch('/api/binance/api/v3/ticker/price?symbol=BTCJPY'),
         ]);
-        if (!usdcResponse.ok) throw new Error(`Binance USDT HTTP error! status: ${usdcResponse.status}`);
-        if (!jpyResponse.ok) throw new Error(`Binance JPY HTTP error! status: ${jpyResponse.status}`);
+        if (!usdcResponse.ok)
+            throw new Error(`Binance USDT HTTP error! status: ${usdcResponse.status}`);
+        if (!jpyResponse.ok)
+            throw new Error(`Binance JPY HTTP error! status: ${jpyResponse.status}`);
         const usdcData = await usdcResponse.json();
         const jpyData = await jpyResponse.json();
         const usdPrice = parseFloat(usdcData.price);
         const jpyPrice = parseFloat(jpyData.price);
-        console.log(`Binance Current: USD=${usdPrice}, JPY=${jpyPrice}`);
         return {
             prices: { usd: usdPrice, jpy: jpyPrice },
             timestamp: new Date().toISOString(),
@@ -60,17 +57,20 @@ const fetchBinanceCurrentPrice = async (): Promise<PriceResponse> => {
     }
 };
 
-const fetchBinanceDailyPrices = async (): Promise<Array<{ date: string; price: number }>> => {
+const fetchBinanceDailyPrices = async (): Promise<
+    Array<{ date: string; price: number }>
+> => {
     try {
-        const response = await fetch('/api/binance/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=365');
-        if (!response.ok) throw new Error(`Binance HTTP error! status: ${response.status}`);
+        const response = await fetch(
+            '/api/binance/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=365'
+        );
+        if (!response.ok)
+            throw new Error(`Binance HTTP error! status: ${response.status}`);
         const data = await response.json();
-        const prices = data.map(([timestamp, open]: [number, string]) => ({
+        return data.map(([timestamp, open]: [number, string]) => ({
             date: new Date(timestamp).toISOString().split('T')[0],
             price: parseFloat(open),
         }));
-        console.log(`Binance Daily Prices: ${prices.length} entries`);
-        return prices;
     } catch (error) {
         console.error('Binance Daily Prices Fetch Error:', error);
         throw error;
@@ -79,12 +79,14 @@ const fetchBinanceDailyPrices = async (): Promise<Array<{ date: string; price: n
 
 const fetchCoinGeckoCurrentPrice = async (): Promise<PriceResponse> => {
     try {
-        const response = await fetch('/api/coingecko/api/v3/simple/price?ids=bitcoin&vs_currencies=usd,jpy');
-        if (!response.ok) throw new Error(`CoinGecko HTTP error! status: ${response.status}`);
+        const response = await fetch(
+            '/api/coingecko/api/v3/simple/price?ids=bitcoin&vs_currencies=usd,jpy'
+        );
+        if (!response.ok)
+            throw new Error(`CoinGecko HTTP error! status: ${response.status}`);
         const data = await response.json();
         const usdPrice = data.bitcoin.usd;
         const jpyPrice = data.bitcoin.jpy;
-        console.log(`CoinGecko Current: USD=${usdPrice}, JPY=${jpyPrice}`);
         return {
             prices: { usd: usdPrice, jpy: jpyPrice },
             timestamp: new Date().toISOString(),
@@ -96,34 +98,38 @@ const fetchCoinGeckoCurrentPrice = async (): Promise<PriceResponse> => {
     }
 };
 
-const fetchCoinGeckoDailyPrices = async (): Promise<Array<{ date: string; price: number }>> => {
+const fetchCoinGeckoDailyPrices = async (): Promise<
+    Array<{ date: string; price: number }>
+> => {
     try {
-        const response = await fetch('/api/coingecko/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=365&interval=daily');
-        if (!response.ok) throw new Error(`CoinGecko HTTP error! status: ${response.status}`);
+        const response = await fetch(
+            '/api/coingecko/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=365&interval=daily'
+        );
+        if (!response.ok)
+            throw new Error(`CoinGecko HTTP error! status: ${response.status}`);
         const data = await response.json();
-        const prices = data.prices.map(([timestamp, price]: [number, number]) => ({
+        return data.prices.map(([timestamp, price]: [number, number]) => ({
             date: new Date(timestamp).toISOString().split('T')[0],
             price,
         }));
-        console.log(`CoinGecko Daily Prices: ${prices.length} entries`);
-        return prices;
     } catch (error) {
         console.error('CoinGecko Daily Prices Fetch Error:', error);
         throw error;
     }
 };
 
-const fetchWeeklyJson = async (): Promise<Array<{ date: string; powerLawPosition: number; price: number }>> => {
+const fetchWeeklyJson = async (): Promise<
+    Array<{ date: string; powerLawPosition: number; price: number }>
+> => {
     try {
         const response = await fetch('/weekly.json');
-        if (!response.ok) throw new Error(`Weekly JSON HTTP error! status: ${response.status}`);
+        if (!response.ok)
+            throw new Error(`Weekly JSON HTTP error! status: ${response.status}`);
         const weeklyData = await response.json();
         if (!Array.isArray(weeklyData)) throw new Error('weekly.json is not an array');
-        const filteredData = weeklyData
-            .filter(item => item.date && typeof item.price === 'number')
+        return weeklyData
+            .filter((item) => item.date && typeof item.price === 'number')
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        console.log(`Weekly JSON: ${filteredData.length} entries`);
-        return filteredData;
     } catch (error) {
         console.error('Weekly JSON Fetch Error:', error);
         return [
@@ -147,7 +153,7 @@ const generateChartData = (
     const allData: ChartDataPoint[] = [];
     const dataMap = new Map<number, ChartDataPoint>();
 
-    weeklyData.forEach(item => {
+    weeklyData.forEach((item) => {
         const date = new Date(item.date);
         const timestamp = date.getTime();
         const days = getDaysSinceGenesis(date);
@@ -165,7 +171,7 @@ const generateChartData = (
         }
     });
 
-    dailyData.forEach(item => {
+    dailyData.forEach((item) => {
         const date = new Date(item.date);
         const timestamp = date.getTime();
         const days = getDaysSinceGenesis(date);
@@ -225,13 +231,15 @@ const generateChartData = (
         }
     }
 
-    allData.push(...Array.from(dataMap.values()).sort((a, b) => a.daysSinceGenesis - b.daysSinceGenesis));
-    const linearLogData = allData.filter(d => d.date <= chartEndTimestamp);
-    const logLogData = allData.filter(d => d.date <= chartEndTimestamp);
+    allData.push(
+        ...Array.from(dataMap.values()).sort((a, b) => a.daysSinceGenesis - b.daysSinceGenesis)
+    );
+    const linearLogData = allData.filter((d) => d.date <= chartEndTimestamp);
+    const logLogData = allData.filter((d) => d.date <= chartEndTimestamp);
 
     const rSquaredInput: [number, number][] = linearLogData
-        .filter(d => !d.isFuture && d.price !== null)
-        .map(d => [Math.log(d.daysSinceGenesis), Math.log(d.price as number)] as [number, number]);
+        .filter((d) => !d.isFuture && d.price !== null)
+        .map((d) => [Math.log(d.daysSinceGenesis), Math.log(d.price as number)] as [number, number]);
     const rSquared = calculateRSquared(rSquaredInput);
 
     return { linearLogData, logLogData, rSquared, todayPowerLawPrice };
@@ -267,7 +275,7 @@ export const useBitcoinData = (): BitcoinData => {
     });
 
     const fetchData = useCallback(async () => {
-        setState(prev => ({ ...prev, loading: true, error: null }));
+        setState((prev) => ({ ...prev, loading: true, error: null }));
         try {
             const weeklyPricesData = await fetchWeeklyJson();
             let currentPriceData: PriceResponse;
@@ -286,7 +294,8 @@ export const useBitcoinData = (): BitcoinData => {
                 ]);
             }
 
-            const { linearLogData, logLogData, rSquared, todayPowerLawPrice } = generateChartData(weeklyPricesData, dailyPricesData, currentPriceData);
+            const { linearLogData, logLogData, rSquared, todayPowerLawPrice } =
+                generateChartData(weeklyPricesData, dailyPricesData, currentPriceData);
 
             setState({
                 loading: false,
@@ -307,7 +316,7 @@ export const useBitcoinData = (): BitcoinData => {
             });
         } catch (error) {
             console.error('全体エラー:', error);
-            setState(prev => ({
+            setState((prev) => ({
                 ...prev,
                 loading: false,
                 error: error instanceof Error ? error : new Error(String(error)),

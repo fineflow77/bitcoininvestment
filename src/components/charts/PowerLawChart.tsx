@@ -1,15 +1,34 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceArea, ReferenceLine, Label } from 'recharts';
+import {
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    ResponsiveContainer,
+    ReferenceArea,
+    ReferenceLine,
+    Label,
+} from 'recharts';
 import { formatCurrency, formatPercentage } from '../../utils/formatters';
 import { HALVING_EVENTS } from '../../utils/constants';
 import { getPowerLawPositionLabel, calculatePowerLawPosition } from '../../utils/models';
 import { getDaysSinceGenesis } from '../../utils/dateUtils';
 
-// 型定義を直接埋め込む
+// 型定義を直接埋め込み
 interface PowerLawChartProps {
     exchangeRate?: number;
-    rSquared?: number | null; // undefined を null に統一
-    chartData: Array<{ date: number; price: number | null; medianModel: number; supportModel: number; isFuture: boolean; daysSinceGenesis: number }>;
+    rSquared?: number | null;
+    chartData: Array<{
+        date: number;
+        price: number | null;
+        medianModel: number;
+        supportModel: number;
+        isFuture: boolean;
+        daysSinceGenesis: number;
+    }>;
     currentPrice: number;
     height?: number;
     isZoomed?: boolean;
@@ -97,30 +116,50 @@ const TooltipContent: React.FC<TooltipContentProps> = ({
         pointPosition = calculatePowerLawPosition(priceUSD, data.medianModel, data.supportModel);
     }
     const isCurrentTimePoint = Math.abs(data.date - new Date().getTime()) < 24 * 60 * 60 * 1000;
-    if (isCurrentTimePoint && powerLawPosition !== undefined) {
-        pointPosition = powerLawPosition ?? null; // undefined を null に変換
+    if (isCurrentTimePoint && powerLawPosition !== undefined && powerLawPosition !== null) {
+        pointPosition = powerLawPosition;
     }
 
     return (
         <div
             className="p-3 rounded-lg shadow-md"
-            style={{ backgroundColor: COLORS.tooltip.bg, border: `1px solid ${COLORS.tooltip.border}`, color: '#fff', fontSize: '12px', opacity: 0.9 }}
+            style={{
+                backgroundColor: COLORS.tooltip.bg,
+                border: `1px solid ${COLORS.tooltip.border}`,
+                color: '#fff',
+                fontSize: '12px',
+                opacity: 0.9,
+            }}
         >
             <p className="font-semibold">{date}</p>
             {!data.isFuture && priceUSD && (
                 <p>
-                    実際価格: <span style={{ color: COLORS.price }}>{formatCurrency(priceUSD, 'USD')} / {formatCurrency(priceJPY || 0, 'JPY')}</span>
+                    実際価格:{' '}
+                    <span style={{ color: COLORS.price }}>
+                        {formatCurrency(priceUSD, 'USD')} / {formatCurrency(priceJPY || 0, 'JPY')}
+                    </span>
                 </p>
             )}
             <p>
-                中央価格: <span style={{ color: COLORS.median }}>{formatCurrency(data.medianModel, 'USD')} / {formatCurrency(data.medianModel * exchangeRate, 'JPY')}</span>
+                中央価格:{' '}
+                <span style={{ color: COLORS.median }}>
+                    {formatCurrency(data.medianModel, 'USD')} /{' '}
+                    {formatCurrency(data.medianModel * exchangeRate, 'JPY')}
+                </span>
             </p>
             <p>
-                下限価格: <span style={{ color: COLORS.support }}>{formatCurrency(data.supportModel, 'USD')} / {formatCurrency(data.supportModel * exchangeRate, 'JPY')}</span>
+                下限価格:{' '}
+                <span style={{ color: COLORS.support }}>
+                    {formatCurrency(data.supportModel, 'USD')} /{' '}
+                    {formatCurrency(data.supportModel * exchangeRate, 'JPY')}
+                </span>
             </p>
             {isCurrentData && pointPosition !== null && (
                 <p className="mt-2 pt-2 border-t border-gray-600">
-                    パワーロー位置: <span style={{ color: getPowerLawPositionColorSoft(pointPosition), fontWeight: 'bold' }}>{formatPercentage(pointPosition)}</span>{' '}
+                    パワーロー位置:{' '}
+                    <span style={{ color: getPowerLawPositionColorSoft(pointPosition), fontWeight: 'bold' }}>
+                        {formatPercentage(pointPosition)}
+                    </span>{' '}
                     <span className="text-xs opacity-80">({getPowerLawPositionLabel(pointPosition)})</span>
                 </p>
             )}
@@ -155,7 +194,7 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
     xAxisScale = 'log',
     yAxisScale = 'log',
     showRSquared = true,
-    chartTitle = "ログログチャート",
+    chartTitle = 'ログログチャート',
 }) => {
     const [zoomState, setZoomState] = useState<ZoomState>({
         start: 0,
@@ -169,11 +208,11 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
     const nowTimestamp = new Date().getTime();
     const chartEndTimestamp = new Date('2040-12-31').getTime();
 
-    const priceData = chartData.map(point => ({
+    const priceData = chartData.map((point) => ({
         ...point,
         price: point.date <= nowTimestamp ? point.price : null,
     }));
-    const modelData = chartData.filter(point => point.date <= chartEndTimestamp);
+    const modelData = chartData.filter((point) => point.date <= chartEndTimestamp);
 
     const { domain, yearTicks, yDomainMin, yDomainMax } = useMemo(() => {
         if (!chartData.length) {
@@ -181,12 +220,19 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
         }
         const minDays = Math.max(1, Math.min(...chartData.map((d) => d.daysSinceGenesis)));
         const maxDays = Math.max(...chartData.map((d) => d.daysSinceGenesis));
-        const prices = chartData.map(d => Math.max(d.price || 1, d.medianModel, d.supportModel)).filter(p => p > 0);
+        const prices = chartData
+            .map((d) => Math.max(d.price || 1, d.medianModel, d.supportModel))
+            .filter((p) => p > 0);
         const minPrice = prices.length > 0 ? Math.min(...prices) : 0.1;
         const maxPrice = prices.length > 0 ? Math.max(...prices) * 1.2 : 1000;
         const yMin = yAxisScale === 'log' ? Math.pow(10, Math.floor(Math.log10(minPrice))) : 0;
         const yMax = yAxisScale === 'log' ? Math.pow(10, Math.ceil(Math.log10(maxPrice))) : maxPrice;
-        return { domain: [minDays, maxDays], yearTicks: generateYearTicks(minDays, maxDays), yDomainMin: yMin, yDomainMax: yMax };
+        return {
+            domain: [minDays, maxDays],
+            yearTicks: generateYearTicks(minDays, maxDays),
+            yDomainMin: yMin,
+            yDomainMax: yMax,
+        };
     }, [chartData, yAxisScale]);
 
     useEffect(() => {
@@ -219,20 +265,33 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
         setZoomState((prev) => ({ ...prev, refAreaLeft: e.activeLabel as number, isZooming: true }));
     }, []);
 
-    const handleMouseMove = useCallback((e: any) => {
-        if (!e || !e.activeLabel || !zoomState.isZooming) return;
-        setZoomState((prev) => ({ ...prev, refAreaRight: e.activeLabel as number }));
-    }, [zoomState.isZooming]);
+    const handleMouseMove = useCallback(
+        (e: any) => {
+            if (!e || !e.activeLabel || !zoomState.isZooming) return;
+            setZoomState((prev) => ({ ...prev, refAreaRight: e.activeLabel as number }));
+        },
+        [zoomState.isZooming]
+    );
 
     const handleMouseUp = useCallback(() => {
         if (!zoomState.isZooming || !zoomState.refAreaLeft || !zoomState.refAreaRight) {
-            setZoomState((prev) => ({ ...prev, isZooming: false, refAreaLeft: null, refAreaRight: null }));
+            setZoomState((prev) => ({
+                ...prev,
+                isZooming: false,
+                refAreaLeft: null,
+                refAreaRight: null,
+            }));
             return;
         }
         let left = Math.min(zoomState.refAreaLeft, zoomState.refAreaRight);
         let right = Math.max(zoomState.refAreaLeft, zoomState.refAreaRight);
         if (right - left < CHART_CONFIG.MIN_ZOOM_AREA) {
-            setZoomState((prev) => ({ ...prev, isZooming: false, refAreaLeft: null, refAreaRight: null }));
+            setZoomState((prev) => ({
+                ...prev,
+                isZooming: false,
+                refAreaLeft: null,
+                refAreaRight: null,
+            }));
             return;
         }
         setZoomState({
@@ -248,7 +307,11 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
     const handleZoomIn = useCallback(() => {
         const range = zoomState.end - zoomState.start;
         const factor = range * CHART_CONFIG.ZOOM_FACTOR;
-        setZoomState((prev) => ({ ...prev, start: prev.start + factor, end: prev.end - factor }));
+        setZoomState((prev) => ({
+            ...prev,
+            start: prev.start + factor,
+            end: prev.end - factor,
+        }));
     }, [zoomState]);
 
     const handleZoomOut = useCallback(() => {
@@ -260,28 +323,57 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
     }, [zoomState]);
 
     const handleResetZoom = useCallback(() => {
-        setZoomState((prev) => ({ ...prev, start: prev.originalDomain[0], end: prev.originalDomain[1] }));
+        setZoomState((prev) => ({
+            ...prev,
+            start: prev.originalDomain[0],
+            end: prev.originalDomain[1],
+        }));
     }, []);
 
     if (!chartData.length) {
-        return <div className="text-gray-400 text-center p-2 bg-gray-800 bg-opacity-50 rounded-lg">データがありません</div>;
+        return (
+            <div className="text-gray-400 text-center p-2 bg-gray-800 bg-opacity-50 rounded-lg">
+                データがありません
+            </div>
+        );
     }
 
     const hasPastData = chartData.some((item) => !item.isFuture && item.price !== null);
     if (!hasPastData) {
-        return <div className="text-gray-400 text-center p-2 bg-gray-800 bg-opacity-50 rounded-lg">過去の価格データがロードされていません</div>;
+        return (
+            <div className="text-gray-400 text-center p-2 bg-gray-800 bg-opacity-50 rounded-lg">
+                過去の価格データがロードされていません
+            </div>
+        );
     }
 
     const currentDomain = [zoomState.start || domain[0], zoomState.end || domain[1]];
 
     return (
         <div className="bg-transparent relative rounded-lg">
-            {chartTitle && <h2 className="text-center text-lg font-medium text-amber-400 mb-2">{chartTitle}</h2>}
+            {chartTitle && (
+                <h2 className="text-center text-lg font-medium text-amber-400 mb-2">{chartTitle}</h2>
+            )}
             <div className="absolute top-1 right-2 z-10">
                 <div className="bg-gray-800 bg-opacity-90 rounded-lg p-1 flex flex-col sm:flex-row items-center space-y-1 sm:space-y-0 sm:space-x-1 shadow-md border border-gray-700">
-                    <button onClick={handleZoomIn} className="bg-gray-700 text-white px-2 py-1 text-xs sm:text-sm rounded sm:rounded-l hover:bg-gray-600">+ 拡大</button>
-                    <button onClick={handleZoomOut} className="bg-gray-700 text-white px-2 py-1 text-xs sm:text-sm hover:bg-gray-600">- 縮小</button>
-                    <button onClick={handleResetZoom} className="bg-gray-700 text-white px-2 py-1 text-xs sm:text-sm rounded sm:rounded-r hover:bg-gray-600">リセット</button>
+                    <button
+                        onClick={handleZoomIn}
+                        className="bg-gray-700 text-white px-2 py-1 text-xs sm:text-sm rounded sm:rounded-l hover:bg-gray-600"
+                    >
+                        + 拡大
+                    </button>
+                    <button
+                        onClick={handleZoomOut}
+                        className="bg-gray-700 text-white px-2 py-1 text-xs sm:text-sm hover:bg-gray-600"
+                    >
+                        - 縮小
+                    </button>
+                    <button
+                        onClick={handleResetZoom}
+                        className="bg-gray-700 text-white px-2 py-1 text-xs sm:text-sm rounded sm:rounded-r hover:bg-gray-600"
+                    >
+                        リセット
+                    </button>
                 </div>
             </div>
             <ResponsiveContainer width="100%" height={height}>
@@ -301,14 +393,42 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
                         fillOpacity={1}
                         yAxisId="left"
                     />
-                    <CartesianGrid stroke={COLORS.grid} strokeDasharray="3 3" opacity={0.5} vertical={true} horizontal={true} />
+                    <CartesianGrid
+                        stroke={COLORS.grid}
+                        strokeDasharray="3 3"
+                        opacity={0.5}
+                        vertical={true}
+                        horizontal={true}
+                    />
                     <Legend
                         verticalAlign="bottom"
                         align="right"
-                        wrapperStyle={{ color: COLORS.legendText, fontSize: '12px', padding: '5px 10px', bottom: 20, right: 20, position: 'absolute' }}
+                        wrapperStyle={{
+                            color: COLORS.legendText,
+                            fontSize: '12px',
+                            padding: '5px 10px',
+                            bottom: 20,
+                            right: 20,
+                            position: 'absolute',
+                        }}
                         formatter={(value) => {
-                            const color = value === 'price' ? COLORS.price : value === 'medianModel' ? COLORS.median : COLORS.support;
-                            return <span style={{ color, marginRight: '15px', fontWeight: 500 }}>{value === 'price' ? '実際価格' : value === 'medianModel' ? '中央価格 (予測)' : '下限価格 (予測)'}</span>;
+                            const color =
+                                value === 'price'
+                                    ? COLORS.price
+                                    : value === 'medianModel'
+                                        ? COLORS.median
+                                        : COLORS.support;
+                            return (
+                                <span
+                                    style={{ color, marginRight: '15px', fontWeight: 500 }}
+                                >
+                                    {value === 'price'
+                                        ? '実際価格'
+                                        : value === 'medianModel'
+                                            ? '中央価格 (予測)'
+                                            : '下限価格 (予測)'}
+                                </span>
+                            );
                         }}
                     />
                     {HALVING_EVENTS.map((event, index) => {
@@ -323,23 +443,44 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
                                     fillOpacity={0.5}
                                     yAxisId="left"
                                 >
-                                    <Label value={event.label} position="insideTop" fill="#fff" fontSize={11} opacity={0.8} />
+                                    <Label
+                                        value={event.label}
+                                        position="insideTop"
+                                        fill="#fff"
+                                        fontSize={11}
+                                        opacity={0.8}
+                                    />
                                 </ReferenceArea>
                             );
                         }
                         return null;
                     })}
                     {zoomState.refAreaLeft && zoomState.refAreaRight && (
-                        <ReferenceArea yAxisId="left" x1={zoomState.refAreaLeft} x2={zoomState.refAreaRight} strokeOpacity={0.3} fill="#fff" fillOpacity={0.3} />
+                        <ReferenceArea
+                            yAxisId="left"
+                            x1={zoomState.refAreaLeft}
+                            x2={zoomState.refAreaRight}
+                            strokeOpacity={0.3}
+                            fill="#fff"
+                            fillOpacity={0.3}
+                        />
                     )}
                     <XAxis
                         dataKey="daysSinceGenesis"
                         stroke="#fff"
                         tickLine={false}
                         axisLine={true}
-                        tickFormatter={(days) => new Date(new Date('2009-01-03').getTime() + days * 86400000).getFullYear().toString()}
+                        tickFormatter={(days) =>
+                            new Date(
+                                new Date('2009-01-03').getTime() + days * 86400000
+                            )
+                                .getFullYear()
+                                .toString()
+                        }
                         tick={{ fontSize: 12, fill: COLORS.legendText, fontWeight: 'bold' }}
-                        ticks={yearTicks.filter((tick) => tick >= currentDomain[0] && tick <= currentDomain[1])}
+                        ticks={yearTicks.filter(
+                            (tick) => tick >= currentDomain[0] && tick <= currentDomain[1]
+                        )}
                         domain={currentDomain}
                         allowDataOverflow={true}
                         type="number"
@@ -354,27 +495,65 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
                         scale={yAxisScale}
                         domain={[yDomainMin, yDomainMax]}
                         allowDataOverflow={true}
-                        tickFormatter={(value) => formatCurrency(value, 'JPY').replace(/[¥,]/g, '')}
+                        tickFormatter={(value) =>
+                            formatCurrency(value, 'JPY').replace(/[¥,]/g, '')
+                        }
                         tick={{ fontSize: 11, fill: COLORS.legendText }}
                         width={70}
-                        label={{ value: '価格 (円)', angle: -90, position: 'insideLeft', style: { fill: '#fff', fontSize: 12, fontWeight: 500 }, dx: -10 }}
+                        label={{
+                            value: '価格 (円)',
+                            angle: -90,
+                            position: 'insideLeft',
+                            style: { fill: '#fff', fontSize: 12, fontWeight: 500 },
+                            dx: -10,
+                        }}
                     />
-                    <Tooltip content={<TooltipContent exchangeRate={exchangeRate} currentPrice={currentPrice} powerLawPosition={powerLawPosition} />} />
+                    <Tooltip
+                        content={
+                            <TooltipContent
+                                exchangeRate={exchangeRate}
+                                currentPrice={currentPrice}
+                                powerLawPosition={powerLawPosition}
+                            />
+                        }
+                    />
                     {currentPriceDate && (
-                        <ReferenceLine x={currentPriceDate} stroke="#ffffff" strokeDasharray="3 3" strokeWidth={CHART_CONFIG.REFERENCE_LINE_WIDTH} yAxisId="left">
-                            <Label value="現在" position="top" fill="#ffffff" fontSize={12} fontWeight="bold" offset={15} />
+                        <ReferenceLine
+                            x={currentPriceDate}
+                            stroke="#ffffff"
+                            strokeDasharray="3 3"
+                            strokeWidth={CHART_CONFIG.REFERENCE_LINE_WIDTH}
+                            yAxisId="left"
+                        >
+                            <Label
+                                value="現在"
+                                position="top"
+                                fill="#ffffff"
+                                fontSize={12}
+                                fontWeight="bold"
+                                offset={15}
+                            />
                         </ReferenceLine>
                     )}
                     <ReferenceArea
                         y1={yDomainMin}
-                        y2={modelData.reduce((min, p) => p.supportModel < min ? p.supportModel : min, Infinity)}
+                        y2={modelData.reduce(
+                            (min, p) => (p.supportModel < min ? p.supportModel : min),
+                            Infinity
+                        )}
                         fill={COLORS.supportArea}
                         fillOpacity={0.05}
                         yAxisId="left"
                     />
                     <ReferenceArea
-                        y1={modelData.reduce((min, p) => p.supportModel < min ? p.supportModel : min, Infinity)}
-                        y2={modelData.reduce((max, p) => p.medianModel > max ? p.medianModel : max, -Infinity)}
+                        y1={modelData.reduce(
+                            (min, p) => (p.supportModel < min ? p.supportModel : min),
+                            Infinity
+                        )}
+                        y2={modelData.reduce(
+                            (max, p) => (p.medianModel > max ? p.medianModel : max),
+                            -Infinity
+                        )}
                         fill={COLORS.priceArea}
                         fillOpacity={0.05}
                         yAxisId="left"
@@ -412,10 +591,10 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
                     />
                 </LineChart>
             </ResponsiveContainer>
-            {showRSquared && rSquared !== null && rSquared !== undefined && ( // undefined チェックを追加
+            {showRSquared && rSquared != null && ( // null または undefined をチェック
                 <div className="absolute top-1 left-2 bg-gray-800 bg-opacity-90 text-white rounded-lg p-1 shadow-lg text-xs sm:text-sm">
                     <span className="font-medium">決定係数 (R²): </span>
-                    <span className="font-bold text-amber-400">{rSquared.toFixed(4)}</span>
+                    <span className="font-bold text-amber-400">{rSquared?.toFixed(4)}</span> {/* オプショナルチェイニングを使用 */}
                 </div>
             )}
         </div>
