@@ -322,3 +322,4 @@ export const useBitcoinData = (): BitcoinData => {
 
     return state;
 };
+
