@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceArea, ReferenceLine, Label } from 'recharts';
 import { formatCurrency, formatPercentage } from '../../utils/formatters';
-import { HALVING_EVENTS, CHART_TIME_RANGE } from '../../utils/constants'; // CHART_TIME_RANGE をインポート
+import { HALVING_EVENTS } from '../../utils/constants';
 import { getPowerLawPositionLabel, calculatePowerLawPosition } from '../../utils/models';
 import { getDaysSinceGenesis } from '../../utils/dateUtils';
 
@@ -68,7 +68,7 @@ const CHART_CONFIG = {
     PRICE_LINE_WIDTH: 1.5,
     MODEL_LINE_WIDTH: 2,
     REFERENCE_LINE_WIDTH: 2,
-    MARGIN: { top: 80, right: 50, left: 70, bottom: 30 },
+    MARGIN: { top: 40, right: 20, left: 50, bottom: 20 }, // グラフ周りのスペースを詰める
     ZOOM_FACTOR: 0.2,
     MIN_ZOOM_AREA: 86400000,
 };
@@ -168,7 +168,7 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
     xAxisScale = 'log',
     yAxisScale = 'log',
     showRSquared = true,
-    chartTitle = "Bitcoin Price Chart (Log-Log Scale)",
+    chartTitle = "ログログチャート",
 }) => {
     const [zoomState, setZoomState] = useState<ZoomState>({
         start: 0,
@@ -184,7 +184,6 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
     const nowTimestamp = new Date().getTime();
     const chartEndTimestamp = new Date('2040-12-31').getTime();
 
-    // 実際価格とモデルデータを分離
     const priceData = chartData.map(point => ({
         ...point,
         price: point.date <= nowTimestamp ? point.price : null,
@@ -299,18 +298,18 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
     const currentDomain = [zoomState.start || domain[0], zoomState.end || domain[1]];
 
     return (
-        <div className="bg-transparent overflow-hidden relative rounded-lg" style={{ backgroundColor: 'transparent' }}>
+        <div className="bg-transparent relative rounded-lg" style={{ backgroundColor: 'transparent' }}>
             {chartTitle && (
-                <h2 className="text-center text-lg font-medium text-amber-400 mb-4">{chartTitle}</h2>
+                <h2 className="text-center text-lg font-medium text-amber-400 mb-2">{chartTitle}</h2>
             )}
-            <div className="absolute top-2 right-4 z-10">
-                <div className="bg-gray-800 bg-opacity-90 rounded-lg p-1 flex items-center space-x-1 shadow-md border border-gray-700">
-                    <button onClick={handleZoomIn} className="bg-gray-700 text-white px-3 py-1 rounded-l text-sm hover:bg-gray-600">+ 拡大</button>
-                    <button onClick={handleZoomOut} className="bg-gray-700 text-white px-3 py-1 text-sm hover:bg-gray-600">- 縮小</button>
-                    <button onClick={handleResetZoom} className="bg-gray-700 text-white px-3 py-1 rounded-r text-sm hover:bg-gray-600">リセット</button>
+            <div className="absolute top-1 right-2 z-10">
+                <div className="bg-gray-800 bg-opacity-90 rounded-lg p-1 flex flex-col sm:flex-row items-center space-y-1 sm:space-y-0 sm:space-x-1 shadow-md border border-gray-700">
+                    <button onClick={handleZoomIn} className="bg-gray-700 text-white px-2 py-1 text-xs sm:text-sm rounded sm:rounded-l hover:bg-gray-600">+ 拡大</button>
+                    <button onClick={handleZoomOut} className="bg-gray-700 text-white px-2 py-1 text-xs sm:text-sm hover:bg-gray-600">- 縮小</button>
+                    <button onClick={handleResetZoom} className="bg-gray-700 text-white px-2 py-1 text-xs sm:text-sm rounded sm:rounded-r hover:bg-gray-600">リセット</button>
                 </div>
             </div>
-            <ResponsiveContainer width="100%" height={height} ref={chartRef}>
+            <ResponsiveContainer width="100%" height={height}>
                 <LineChart
                     data={chartData}
                     margin={CHART_CONFIG.MARGIN}
@@ -367,7 +366,7 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
                         stroke="#fff"
                         tickLine={false}
                         axisLine={true}
-                        tickFormatter={(days) => new Date(CHART_TIME_RANGE.START_DATE.getTime() + days * 86400000).getFullYear().toString()} // 修正済み
+                        tickFormatter={(days) => new Date(new Date('2009-01-03').getTime() + days * 86400000).getFullYear().toString()}
                         tick={{ fontSize: 12, fill: COLORS.legendText, fontWeight: 'bold' }}
                         ticks={yearTicks.filter((tick) => tick >= currentDomain[0] && tick <= currentDomain[1])}
                         domain={currentDomain}
@@ -443,7 +442,7 @@ const PowerLawChart: React.FC<PowerLawChartProps> = ({
                 </LineChart>
             </ResponsiveContainer>
             {showRSquared && rSquared !== null && (
-                <div className="absolute top-2 left-4 bg-gray-800 bg-opacity-90 text-white rounded-lg p-2 shadow-lg">
+                <div className="absolute top-1 left-2 bg-gray-800 bg-opacity-90 text-white rounded-lg p-1 shadow-lg text-xs sm:text-sm">
                     <span className="font-medium">決定係数 (R²): </span>
                     <span className="font-bold text-amber-400">{rSquared.toFixed(4)}</span>
                 </div>
