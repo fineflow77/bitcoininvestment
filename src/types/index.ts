@@ -9,19 +9,6 @@ export interface ChartDataPoint {
     isFuture?: boolean;
 }
 
-export interface PowerLawChartProps {
-    rSquared: number;
-    chartData: ChartDataPoint[];
-    exchangeRate: number;
-    currentPrice?: number;
-    height: number;
-    showPositionInfo?: boolean;
-    isZoomed?: boolean;
-    powerLawPosition?: number | null;
-    xAxisScale?: 'linear' | 'log';
-    yAxisScale?: 'linear' | 'log';
-}
-
 export interface BitcoinData {
     loading: boolean;
     error: Error | null;
@@ -32,7 +19,7 @@ export interface BitcoinData {
     dailyPrices: { date: string; price: number }[];
     dailyPowerLawData: ChartDataPoint[];
     rSquared: number | null;
-    // dataSources?: { currentPrice?: string }; // 将来用にコメントアウト
+    dataSources?: { currentPrice?: string; dailyPrices?: string; weeklyPrices?: string; };
 }
 
 export interface PriceResponse {
@@ -41,4 +28,5 @@ export interface PriceResponse {
         jpy: number;
     };
     timestamp: string;
+    source?: string;
 }

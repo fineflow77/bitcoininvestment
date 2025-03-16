@@ -3,18 +3,28 @@ import { Link } from 'react-router-dom';
 import { TrendingUp, Info, ArrowUpRight } from 'lucide-react';
 import { useBitcoinData } from '../hooks/useBitcoinData';
 import PowerLawChart from '../components/charts/PowerLawChart';
-import { formatCurrency } from '../utils/formatters';
+import { formatCurrency, formatPercentage } from '../utils/formatters';
 import {
   calculatePowerLawPosition,
   getPowerLawPositionLabel,
-  getPowerLawPositionColor,
   calculateRSquared,
-  formatPercentage,
 } from '../utils/models';
 import DataContainer from '../components/ui/DataContainer';
 import { getDaysSinceGenesis } from '../utils/dateUtils';
 import { ChartLineUp } from 'phosphor-react';
 import { ChartDataPoint } from '../types';
+
+// ローカルで getPowerLawPositionColorSoft を定義
+const getPowerLawPositionColorSoft = (position: number | null | undefined): string => {
+  if (position === null || position === undefined) return '#888888';
+  if (position < -50) return '#64B5F6';
+  if (position < -30) return '#90CAF9';
+  if (position < -10) return '#81C784';
+  if (position <= 10) return '#AED581';
+  if (position <= 30) return '#FFB74D';
+  if (position <= 70) return '#EF9A9A';
+  return '#E57373';
+};
 
 const typography = {
   h2: 'text-xl sm:text-2xl font-semibold tracking-tight',
@@ -42,7 +52,17 @@ const colors = {
 };
 
 const Home: React.FC = () => {
-  const { loading, error, currentPrice, exchangeRate, weeklyPrices, powerLawData, dailyPrices, rSquared: dataRSquared } = useBitcoinData();
+  const {
+    loading,
+    error,
+    currentPrice,
+    exchangeRate,
+    weeklyPrices,
+    linearLogData: powerLawData, // powerLawData を linearLogData に変更
+    dailyPrices,
+    rSquared: dataRSquared,
+    todayPowerLawPrice, // 本日のパワーロー価格
+  } = useBitcoinData();
 
   const [rSquared, setRSquared] = useState<number>(0.9703);
 
@@ -75,15 +95,6 @@ const Home: React.FC = () => {
     const yesterdayPrice = sortedPrices[1].price;
     return ((latestPrice - yesterdayPrice) / yesterdayPrice) * 100;
   }, [currentPrice, dailyPrices]);
-
-  const { medianPrice, supportPrice } = useMemo(() => {
-    if (!powerLawData || powerLawData.length === 0) return { medianPrice: 0, supportPrice: 0 };
-    const now = Date.now();
-    const closestPoint = powerLawData.reduce((closest: ChartDataPoint, current: ChartDataPoint) =>
-      Math.abs(current.date - now) < Math.abs(closest.date - now) ? current : closest
-    );
-    return { medianPrice: closestPoint.medianModel, supportPrice: closestPoint.supportModel };
-  }, [powerLawData]);
 
   const daysCount = useMemo(() => getDaysSinceGenesis(new Date()), []);
 
@@ -149,7 +160,7 @@ const Home: React.FC = () => {
                     </div>
                   )}
                   {powerLawPosition !== null && (
-                    <div className="text-sm font-medium flex items-center" style={{ color: getPowerLawPositionColor(powerLawPosition) }} aria-label={`パワーロー位置: ${formatPercentage(powerLawPosition)}`}>
+                    <div className="text-sm font-medium flex items-center" style={{ color: getPowerLawPositionColorSoft(powerLawPosition) }} aria-label={`パワーロー位置: ${formatPercentage(powerLawPosition)}`}>
                       パワーロー位置: {formatPercentage(powerLawPosition)}
                       <span className="ml-1 text-xs">({getPowerLawPositionLabel(powerLawPosition)})</span>
                     </div>
@@ -163,13 +174,15 @@ const Home: React.FC = () => {
               <span className="w-3 h-3 rounded-full bg-green-500 mr-2" /> 本日のパワーロー中央価格
             </h3>
             <DataContainer isLoading={loading} error={error} loadingMessage="価格データ取得中..." noDataMessage="中央価格データが利用できません">
-              {powerLawData && powerLawData.length > 0 ? (
+              {todayPowerLawPrice ? (
                 <div className="space-y-2">
-                  <div className="text-lg font-medium text-green-400">{formatCurrency(medianPrice * exchangeRate, 'JPY')}</div>
-                  <div className="text-xs text-gray-300">({formatCurrency(medianPrice, 'USD')})</div>
+                  <div className="text-lg font-medium text-green-400">{formatCurrency(todayPowerLawPrice.median * exchangeRate, 'JPY')}</div>
+                  <div className="text-xs text-gray-300">({formatCurrency(todayPowerLawPrice.median, 'USD')})</div>
                   <div className="text-xs text-gray-400">累計日数: {daysCount.toLocaleString()} 日</div>
                 </div>
-              ) : null}
+              ) : (
+                <div className="text-gray-400">データがありません</div>
+              )}
             </DataContainer>
           </div>
           <div className={`${colors.cardBg} p-5 rounded-xl shadow-md ${colors.cardBorder} transition-all duration-300 hover:shadow-xl`}>
@@ -177,13 +190,15 @@ const Home: React.FC = () => {
               <span className="w-3 h-3 rounded-full bg-red-500 mr-2" /> 本日のパワーロー下限価格
             </h3>
             <DataContainer isLoading={loading} error={error} loadingMessage="価格データ取得中..." noDataMessage="下限価格データが利用できません">
-              {powerLawData && powerLawData.length > 0 ? (
+              {todayPowerLawPrice ? (
                 <div className="space-y-2">
-                  <div className="text-lg font-medium text-red-400">{formatCurrency(supportPrice * exchangeRate, 'JPY')}</div>
-                  <div className="text-xs text-gray-300">({formatCurrency(supportPrice, 'USD')})</div>
+                  <div className="text-lg font-medium text-red-400">{formatCurrency(todayPowerLawPrice.support * exchangeRate, 'JPY')}</div>
+                  <div className="text-xs text-gray-300">({formatCurrency(todayPowerLawPrice.support, 'USD')})</div>
                   <div className="text-xs text-gray-400">　</div>
                 </div>
-              ) : null}
+              ) : (
+                <div className="text-gray-400">データがありません</div>
+              )}
             </DataContainer>
           </div>
         </div>

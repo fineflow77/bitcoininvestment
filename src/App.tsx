@@ -5,22 +5,28 @@ import Dashboard from './pages/Home';
 import InvestmentSimulator from './components/simulators/InvestmentSimulator';
 import WithdrawalSimulator from './components/simulators/WithdrawalSimulator';
 import PowerLawExplanation from './pages/PowerLawExplanation';
-import PowerLawChart from './components/charts/PowerLawChart';
+import PowerLawChart from './components/charts/PowerLawChart.tsx'; // 拡張子 .tsx を追加
 import { useBitcoinData } from './hooks/useBitcoinData';
-import { PriceModel } from './utils/constants';
+import { PriceModel } from './utils/constants.ts'; // 拡張子 .ts を追加
 
 const App: React.FC = () => {
   const {
     loading,
     error,
     currentPrice,
-    powerLawData,
+    linearLogData = [], // デフォルトで空配列
+    logLogData = [],   // デフォルトで空配列
     exchangeRate,
     rSquared,
   } = useBitcoinData();
 
-  const powerLawPosition = powerLawData.length > 0 && currentPrice
-    ? ((currentPrice.prices.usd - powerLawData[powerLawData.length - 1].medianModel) / powerLawData[powerLawData.length - 1].medianModel) * 100
+  // powerLawData は linearLogData を使用（要件に合わせて調整）
+  const powerLawData = linearLogData;
+
+  // powerLawPosition の計算を防御的に
+  const powerLawPosition = powerLawData.length > 0 && currentPrice?.prices.usd
+    ? ((currentPrice.prices.usd - powerLawData[powerLawData.length - 1].medianModel) /
+      powerLawData[powerLawData.length - 1].medianModel) * 100
     : null;
 
   // WithdrawalSimulator用のラッパーコンポーネント
@@ -65,16 +71,36 @@ const App: React.FC = () => {
                       <p className="text-xl text-red-500">Error: {error.message}</p>
                     </div>
                   ) : (
-                    <PowerLawChart
-                      exchangeRate={exchangeRate}
-                      rSquared={rSquared || 0}
-                      chartData={powerLawData}
-                      currentPrice={currentPrice?.prices.usd}
-                      height={500}
-                      showPositionInfo={true}
-                      isZoomed={false}
-                      powerLawPosition={powerLawPosition}
-                    />
+                    <>
+                      {/* Linear-Log チャート */}
+                      <PowerLawChart
+                        exchangeRate={exchangeRate}
+                        rSquared={rSquared || 0}
+                        chartData={linearLogData}
+                        currentPrice={currentPrice?.prices.usd}
+                        height={500}
+                        showPositionInfo={true}
+                        isZoomed={false}
+                        powerLawPosition={powerLawPosition}
+                        xAxisScale="linear"
+                        yAxisScale="log"
+                        chartTitle="Bitcoin Power Law Chart (Linear X, Log Y)"
+                      />
+                      {/* Log-Log チャート */}
+                      <PowerLawChart
+                        exchangeRate={exchangeRate}
+                        rSquared={rSquared || 0}
+                        chartData={logLogData}
+                        currentPrice={currentPrice?.prices.usd}
+                        height={500}
+                        showPositionInfo={true}
+                        isZoomed={false}
+                        powerLawPosition={powerLawPosition}
+                        xAxisScale="log"
+                        yAxisScale="log"
+                        chartTitle="Bitcoin Power Law Chart (Log X, Log Y)"
+                      />
+                    </>
                   )
                 }
               />

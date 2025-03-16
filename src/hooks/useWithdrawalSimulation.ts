@@ -1,7 +1,16 @@
 import { useState } from 'react';
 import { calculateDays } from '../utils/dateUtils';
-import { btcPriceMedian } from '../utils/models';
 import { CURRENT_YEAR, TRANSITION_START_YEAR, TARGET_YEAR, PriceModel } from '../utils/constants';
+
+// パワーロー価格計算関数をローカルで定義
+const btcPriceMedian = (daysSinceGenesis: number, priceModel: PriceModel): number => {
+    const coefficients = {
+        [PriceModel.STANDARD]: { a: 0.000015, b: 3.5 },    // 標準モデル（例）
+        [PriceModel.CONSERVATIVE]: { a: 0.00001, b: 3.2 }, // 保守的モデル（例）
+    };
+    const { a, b } = coefficients[priceModel];
+    return a * Math.pow(daysSinceGenesis, b); // USDでの価格を返す
+};
 
 export interface WithdrawalInputs {
     initialBTC: string;

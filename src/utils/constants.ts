@@ -13,6 +13,17 @@ export const TRANSITION_START_YEAR: number = 2039;
 export const TARGET_YEAR: number = 2050;
 export const CURRENT_YEAR: number = 2025;
 
+export const CHART_TIME_RANGE = {
+  START_DATE: new Date('2009-01-03'), // ビットコインのジェネシスブロック
+  END_DATE: new Date('2040-12-31'),   // チャート表示の終了点
+  DISPLAY_START_DATE: new Date('2010-07-18'), // 表示開始点
+};
+
+export const TIME_INTERVALS = {
+  DAY_MS: 24 * 60 * 60 * 1000,
+  WEEK_MS: 7 * 24 * 60 * 60 * 1000,
+};
+
 export enum PriceModel {
   STANDARD = 'standard',
   CONSERVATIVE = 'conservative',
@@ -22,12 +33,12 @@ export const PriceModelConfig = {
   [PriceModel.STANDARD]: {
     name: '標準モデル',
     targetValueUSD: 10000000,
-    description: 'HC Burgerが提唱するパワーロー方程式を基に、2039年以降滑らかに減衰し2050年で1000万ドルに到達。ビットコインが基軸通貨になるシナリオ。',
+    description: 'HC Burgerが提唱するパワーロー方程式を基に、2039年以降滑らかに減衰し2050年で1000万ドルに到達。',
   },
   [PriceModel.CONSERVATIVE]: {
     name: '保守的モデル',
     targetValueUSD: 4000000,
-    description: '控えめに調整し、2050年で400万ドルに到達。ビットコインがゴールドの4倍の時価総額になるシナリオ。',
+    description: '控えめに調整し、2050年で400万ドルに到達。',
   },
 } as const;
 
