@@ -68,7 +68,7 @@ const TooltipContent: React.FC<TooltipContentProps> = ({
         pointPosition = calculatePowerLawPosition(priceUSD, data.medianModel, data.supportModel);
     }
     const isCurrentTimePoint = Math.abs(data.date - new Date().getTime()) < 24 * 60 * 60 * 1000;
-    if (isCurrentTimePoint && powerLawPosition !== null) {
+    if (isCurrentTimePoint && powerLawPosition !== null && powerLawPosition !== undefined) {
         pointPosition = powerLawPosition;
     }
 
