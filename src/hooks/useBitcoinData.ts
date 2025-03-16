@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { PriceModel, CHART_TIME_RANGE, TIME_INTERVALS } from '../utils/constants';
+import { CHART_TIME_RANGE, TIME_INTERVALS } from '../utils/constants';
 import { calculateRSquared } from '../utils/models';
 
 interface ChartDataPoint {
